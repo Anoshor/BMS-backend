@@ -1,179 +1,118 @@
 package com.bms.backend.dto.request;
 
 import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ManagerRegistrationRequest {
-    
-    // Personal details
+
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
     private String email;
-    
-    @NotBlank(message = "Phone number is required")
-    @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Invalid phone number format")
-    private String phone;
-    
+
+    @NotBlank(message = "Contact number is required")
+    @Pattern(regexp = "^[6-9]\\d{9}$", message = "Invalid contact number format")
+    private String contactNum;
+
     @NotBlank(message = "Password is required")
-    @Size(min = 8, message = "Password must be at least 8 characters")
-    @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]", 
-             message = "Password must contain uppercase, lowercase, number and special character")
+    @Size(min = 8, max = 100, message = "Password must be between 8 and 100 characters")
     private String password;
-    
+
+    @NotBlank(message = "Confirm password is required")
+    private String confirmPassword;
+
     @NotBlank(message = "First name is required")
-    @Size(max = 100, message = "First name cannot exceed 100 characters")
+    @Size(min = 2, max = 50, message = "First name must be between 2 and 50 characters")
     private String firstName;
-    
+
     @NotBlank(message = "Last name is required")
-    @Size(max = 100, message = "Last name cannot exceed 100 characters")
+    @Size(min = 2, max = 50, message = "Last name must be between 2 and 50 characters")
     private String lastName;
-    
+
+    @NotNull(message = "Date of birth is required")
     @Past(message = "Date of birth must be in the past")
-    private LocalDate dateOfBirth;
-    
-    // Business details
-    @NotBlank(message = "Company name is required")
-    @Size(max = 200, message = "Company name cannot exceed 200 characters")
-    private String companyName;
-    
-    @NotBlank(message = "Business license number is required")
-    @Size(max = 100, message = "Business license number cannot exceed 100 characters")
-    private String businessLicenseNumber;
-    
-    @Size(max = 50, message = "Tax ID cannot exceed 50 characters")
-    private String taxId;
-    
-    @NotBlank(message = "Business address is required")
-    private String businessAddress;
-    
-    @NotBlank(message = "Business phone is required")
-    @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Invalid business phone format")
-    private String businessPhone;
-    
-    @Email(message = "Invalid business email format")
-    private String businessEmail;
-    
-    // Device details
-    @NotBlank(message = "Device ID is required")
+    private LocalDateTime dob;
+
+    @NotBlank(message = "Gender is required")
+    @Pattern(regexp = "^(male|female|other)$", message = "Gender must be male, female, or other")
+    private String gender;
+
+    @NotBlank(message = "Property name is required")
+    private String propertyName;
+
+    @NotBlank(message = "Property manager name is required")
+    private String propertyManagerName;
+
+    @NotBlank(message = "Property address is required")
+    private String propertyAddress;
+
+    @NotBlank(message = "Property type is required")
+    @Pattern(regexp = "^(residential|commercial)$", message = "Property type must be residential or commercial")
+    private String propertyType;
+
+    @NotNull(message = "Square footage is required")
+    @Min(value = 1, message = "Square footage must be positive")
+    private Integer squareFootage;
+
+    @NotNull(message = "Number of units is required")
+    @Min(value = 1, message = "Number of units must be positive")
+    private Integer numberOfUnits;
+
+    @NotBlank(message = "Unit number is required")
+    private String unitNumber;
+
+    @NotBlank(message = "Unit type is required")
+    private String unitType;
+
+    @NotNull(message = "Floor number is required")
+    @Min(value = 1, message = "Floor must be positive")
+    private Integer floor;
+
+    @NotNull(message = "Number of bedrooms is required")
+    @Min(value = 0, message = "Bedrooms cannot be negative")
+    private Integer bedrooms;
+
+    @NotNull(message = "Number of bathrooms is required")
+    @Min(value = 0, message = "Bathrooms cannot be negative")
+    private Integer bathrooms;
+
+    @NotBlank(message = "Furnished status is required")
+    @Pattern(regexp = "^(furnished|semi-furnished|unfurnished)$", message = "Furnished must be furnished, semi-furnished, or unfurnished")
+    private String furnished;
+
+    @NotBlank(message = "Balcony status is required")
+    @Pattern(regexp = "^(yes|no)$", message = "Balcony must be yes or no")
+    private String balcony;
+
+    @NotNull(message = "Rent is required")
+    @DecimalMin(value = "0.0", inclusive = false, message = "Rent must be positive")
+    private BigDecimal rent;
+
+    @NotNull(message = "Security deposit is required")
+    @DecimalMin(value = "0.0", message = "Security deposit cannot be negative")
+    private BigDecimal securityDeposit;
+
+    @NotNull(message = "Maintenance charges are required")
+    @DecimalMin(value = "0.0", message = "Maintenance charges cannot be negative")
+    private BigDecimal maintenanceCharges;
+
+    @NotBlank(message = "Occupancy status is required")
+    @Pattern(regexp = "^(occupied|vacant|under-maintenance)$", message = "Occupancy must be occupied, vacant, or under-maintenance")
+    private String occupancy;
+
+    @NotNull(message = "Utility meter number is required")
+    @Min(value = 1, message = "Utility meter number must be positive")
+    private Integer utilityMeterNumber;
+
+    private String deviceType = "web";
     private String deviceId;
-    
-    @Pattern(regexp = "^(ios|android|web)$", message = "Device type must be ios, android, or web")
-    private String deviceType = "android";
-    
-    // Constructors
-    public ManagerRegistrationRequest() {}
-    
-    // Getters and Setters
-    public String getEmail() {
-        return email;
-    }
-    
-    public void setEmail(String email) {
-        this.email = email;
-    }
-    
-    public String getPhone() {
-        return phone;
-    }
-    
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-    
-    public String getPassword() {
-        return password;
-    }
-    
-    public void setPassword(String password) {
-        this.password = password;
-    }
-    
-    public String getFirstName() {
-        return firstName;
-    }
-    
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-    
-    public String getLastName() {
-        return lastName;
-    }
-    
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-    
-    public LocalDate getDateOfBirth() {
-        return dateOfBirth;
-    }
-    
-    public void setDateOfBirth(LocalDate dateOfBirth) {
-        this.dateOfBirth = dateOfBirth;
-    }
-    
-    public String getCompanyName() {
-        return companyName;
-    }
-    
-    public void setCompanyName(String companyName) {
-        this.companyName = companyName;
-    }
-    
-    public String getBusinessLicenseNumber() {
-        return businessLicenseNumber;
-    }
-    
-    public void setBusinessLicenseNumber(String businessLicenseNumber) {
-        this.businessLicenseNumber = businessLicenseNumber;
-    }
-    
-    public String getTaxId() {
-        return taxId;
-    }
-    
-    public void setTaxId(String taxId) {
-        this.taxId = taxId;
-    }
-    
-    public String getBusinessAddress() {
-        return businessAddress;
-    }
-    
-    public void setBusinessAddress(String businessAddress) {
-        this.businessAddress = businessAddress;
-    }
-    
-    public String getBusinessPhone() {
-        return businessPhone;
-    }
-    
-    public void setBusinessPhone(String businessPhone) {
-        this.businessPhone = businessPhone;
-    }
-    
-    public String getBusinessEmail() {
-        return businessEmail;
-    }
-    
-    public void setBusinessEmail(String businessEmail) {
-        this.businessEmail = businessEmail;
-    }
-    
-    public String getDeviceId() {
-        return deviceId;
-    }
-    
-    public void setDeviceId(String deviceId) {
-        this.deviceId = deviceId;
-    }
-    
-    public String getDeviceType() {
-        return deviceType;
-    }
-    
-    public void setDeviceType(String deviceType) {
-        this.deviceType = deviceType;
-    }
 }
