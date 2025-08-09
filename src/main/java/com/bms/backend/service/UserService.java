@@ -45,12 +45,12 @@ public class UserService {
         
         User user = new User();
         user.setEmail(request.getEmail());
-        user.setPhone(request.getPhone());
+        user.setPhone(request.getContactNum());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setRole(UserRole.TENANT);
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
-        user.setDateOfBirth(request.getDateOfBirth());
+        user.setDateOfBirth(request.getDob().toLocalDate());
         user.setAccountStatus(AccountStatus.PENDING);
         user.setEmailVerified(false);
         user.setPhoneVerified(false);
@@ -73,26 +73,25 @@ public class UserService {
         
         User user = new User();
         user.setEmail(request.getEmail());
-        user.setPhone(request.getPhone());
+        user.setPhone(request.getContactNum());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setRole(UserRole.PROPERTY_MANAGER);
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
-        user.setDateOfBirth(request.getDateOfBirth());
+        user.setDateOfBirth(request.getDob().toLocalDate());
         user.setAccountStatus(AccountStatus.PENDING);
         user.setEmailVerified(false);
         user.setPhoneVerified(false);
         
         User savedUser = userRepository.save(user);
         
-        // Create manager profile with business details
+        // Create manager profile with property details
         ManagerProfile profile = new ManagerProfile(savedUser);
-        profile.setCompanyName(request.getCompanyName());
-        profile.setBusinessLicenseNumber(request.getBusinessLicenseNumber());
-        profile.setTaxId(request.getTaxId());
-        profile.setBusinessAddress(request.getBusinessAddress());
-        profile.setBusinessPhone(request.getBusinessPhone());
-        profile.setBusinessEmail(request.getBusinessEmail());
+        profile.setCompanyName(request.getPropertyName());
+        profile.setBusinessLicenseNumber(request.getPropertyManagerName());
+        profile.setBusinessAddress(request.getPropertyAddress());
+        profile.setBusinessPhone(request.getContactNum());
+        profile.setBusinessEmail(request.getEmail());
         managerProfileRepository.save(profile);
         
         // Send verification OTPs
@@ -221,7 +220,7 @@ public class UserService {
             throw new IllegalArgumentException("Email is already registered");
         }
         
-        if (userRepository.existsByPhone(request.getPhone())) {
+        if (userRepository.existsByPhone(request.getContactNum())) {
             throw new IllegalArgumentException("Phone number is already registered");
         }
     }
@@ -231,17 +230,12 @@ public class UserService {
             throw new IllegalArgumentException("Email is already registered");
         }
         
-        if (userRepository.existsByPhone(request.getPhone())) {
+        if (userRepository.existsByPhone(request.getContactNum())) {
             throw new IllegalArgumentException("Phone number is already registered");
         }
         
-        if (managerProfileRepository.findByBusinessLicenseNumber(request.getBusinessLicenseNumber()).isPresent()) {
-            throw new IllegalArgumentException("Business license number is already registered");
-        }
-        
-        if (request.getTaxId() != null && 
-            managerProfileRepository.findByTaxId(request.getTaxId()).isPresent()) {
-            throw new IllegalArgumentException("Tax ID is already registered");
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            throw new IllegalArgumentException("Passwords do not match");
         }
     }
 }
