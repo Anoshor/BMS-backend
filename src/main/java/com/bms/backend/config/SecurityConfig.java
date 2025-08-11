@@ -36,8 +36,14 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints - Authentication
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        // Public endpoints - Authentication (except profile)
+                        .requestMatchers("/api/v1/auth/signup", "/api/v1/auth/login", 
+                                       "/api/v1/auth/refresh-token", "/api/v1/auth/logout",
+                                       "/api/v1/auth/logout-all-devices", "/api/v1/auth/verify-email",
+                                       "/api/v1/auth/verify-phone").permitAll()
+                        
+                        // Profile endpoint requires authentication
+                        .requestMatchers("/api/v1/auth/profile").authenticated()
 
                         // Health check and monitoring
                         .requestMatchers("/api/v1/health").permitAll()

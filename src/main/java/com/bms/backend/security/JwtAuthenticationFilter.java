@@ -118,7 +118,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private boolean isPublicEndpoint(String path) {
-        return path.startsWith("/api/v1/auth/") ||
+        return (path.startsWith("/api/v1/auth/") && 
+                !path.equals("/api/v1/auth/profile")) ||
                 path.equals("/api/v1/health") ||
                 path.startsWith("/actuator/") ||
                 path.startsWith("/v3/api-docs") ||

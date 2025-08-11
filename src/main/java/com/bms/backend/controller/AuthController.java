@@ -1,18 +1,21 @@
 package com.bms.backend.controller;
 
 import com.bms.backend.dto.request.LoginRequest;
+import com.bms.backend.dto.request.SignupRequest;
 import com.bms.backend.dto.response.ApiResponse;
 import com.bms.backend.dto.response.AuthResponse;
 import com.bms.backend.dto.response.UserDto;
 import com.bms.backend.entity.User;
 import com.bms.backend.enums.AccountStatus;
 import com.bms.backend.enums.DeviceType;
+import com.bms.backend.enums.UserRole;
 import com.bms.backend.service.JwtService;
 import com.bms.backend.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -28,6 +31,44 @@ public class AuthController {
     @Autowired
     private JwtService jwtService;
     
+    @PostMapping("/signup")
+    public ResponseEntity<ApiResponse<AuthResponse>> signup(
+            @RequestBody @Valid SignupRequest request,
+            HttpServletRequest httpRequest) {
+        
+        try {
+            request.setDeviceType(request.getDeviceType() != null ? request.getDeviceType() : "web");
+            
+            User user = userService.createUser(request);
+            
+            DeviceType deviceType = DeviceType.fromCode(request.getDeviceType());
+            String accessToken = jwtService.generateAccessToken(user);
+            String refreshToken = jwtService.generateRefreshToken(user, request.getDeviceId(), deviceType);
+            
+            AuthResponse authResponse = AuthResponse.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(refreshToken)
+                    .user(UserDto.from(user))
+                    .requiresVerification(true)
+                    .requiresDocuments(user.getRole() == UserRole.PROPERTY_MANAGER)
+                    .expiresIn(jwtService.getAccessTokenExpiration())
+                    .build();
+            
+            String message = user.getRole() == UserRole.PROPERTY_MANAGER ? 
+                    "Manager registration successful. Please verify your email and phone, then add property details." :
+                    "Tenant registration successful. Please verify your email and phone.";
+            
+            return ResponseEntity.ok(ApiResponse.success(authResponse, message));
+            
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Registration failed. Please try again."));
+        }
+    }
+    
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(
             @RequestBody @Valid LoginRequest request,
@@ -39,14 +80,8 @@ public class AuthController {
             request.setUserAgent(httpRequest.getHeader("User-Agent"));
             request.setDeviceType(request.getDeviceType() != null ? request.getDeviceType() : "android");
             
-            // Find user by email or phone
-            Optional<User> userOpt = userService.findByEmailOrPhone(request.getIdentifier());
-            if (userOpt.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Invalid credentials"));
-            }
-            
-            User user = userOpt.get();
+            // Validate role and find user
+            User user = userService.validateLoginWithRole(request.getIdentifier(), request.getRole());
             
             // Check if account is locked
             if (userService.isAccountLocked(user)) {
@@ -184,6 +219,61 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("Logout from all devices failed"));
+        }
+    }
+    
+    @PostMapping("/verify-email")
+    public ResponseEntity<ApiResponse<String>> verifyEmail(
+            @RequestParam String email,
+            @RequestParam String otp) {
+        
+        try {
+            userService.verifyEmail(email, otp);
+            return ResponseEntity.ok(ApiResponse.success(null, "Email verified successfully"));
+            
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Email verification failed"));
+        }
+    }
+    
+    @PostMapping("/verify-phone")
+    public ResponseEntity<ApiResponse<String>> verifyPhone(
+            @RequestParam String phone,
+            @RequestParam String otp) {
+        
+        try {
+            userService.verifyPhone(phone, otp);
+            return ResponseEntity.ok(ApiResponse.success(null, "Phone verified successfully"));
+            
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Phone verification failed"));
+        }
+    }
+    
+    @GetMapping("/profile")
+    public ResponseEntity<ApiResponse<UserDto>> getProfile(
+            @AuthenticationPrincipal User user) {
+        
+        try {
+            if (user == null) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("User not authenticated"));
+            }
+            
+            UserDto userDto = UserDto.from(user);
+            return ResponseEntity.ok(ApiResponse.success(userDto, "Profile retrieved successfully"));
+            
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to retrieve profile"));
         }
     }
     
