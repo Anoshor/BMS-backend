@@ -1,6 +1,7 @@
 package com.bms.backend.repository;
 
 import com.bms.backend.entity.ManagerProfile;
+import com.bms.backend.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,6 +13,8 @@ import java.util.UUID;
 
 @Repository
 public interface ManagerProfileRepository extends JpaRepository<ManagerProfile, UUID> {
+    
+    Optional<ManagerProfile> findByUser(User user);
     
     Optional<ManagerProfile> findByUserId(UUID userId);
     
