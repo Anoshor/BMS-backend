@@ -67,6 +67,21 @@ public class ManagerProfile {
     @Column(name = "profile_completed")
     private Boolean profileCompleted = false;
     
+    @Column(name = "admin_approved")
+    private Boolean adminApproved = false;
+    
+    @Column(name = "approval_status")
+    private String approvalStatus = "PENDING"; // PENDING, APPROVED, REJECTED
+    
+    @Column(name = "approved_by")
+    private String approvedBy;
+    
+    @Column(name = "approval_date")
+    private Instant approvalDate;
+    
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+    
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
@@ -271,5 +286,57 @@ public class ManagerProfile {
         return Boolean.TRUE.equals(profileCompleted) && 
                hasBusinessDetails() && 
                hasRequiredDocuments();
+    }
+    
+    public Boolean getAdminApproved() {
+        return adminApproved;
+    }
+    
+    public void setAdminApproved(Boolean adminApproved) {
+        this.adminApproved = adminApproved;
+    }
+    
+    public String getApprovalStatus() {
+        return approvalStatus;
+    }
+    
+    public void setApprovalStatus(String approvalStatus) {
+        this.approvalStatus = approvalStatus;
+    }
+    
+    public String getApprovedBy() {
+        return approvedBy;
+    }
+    
+    public void setApprovedBy(String approvedBy) {
+        this.approvedBy = approvedBy;
+    }
+    
+    public Instant getApprovalDate() {
+        return approvalDate;
+    }
+    
+    public void setApprovalDate(Instant approvalDate) {
+        this.approvalDate = approvalDate;
+    }
+    
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+    
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
+    }
+    
+    public boolean isApproved() {
+        return Boolean.TRUE.equals(adminApproved) && "APPROVED".equals(approvalStatus);
+    }
+    
+    public boolean isPending() {
+        return "PENDING".equals(approvalStatus);
+    }
+    
+    public boolean isRejected() {
+        return "REJECTED".equals(approvalStatus);
     }
 }

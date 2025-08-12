@@ -296,6 +296,24 @@ public class UserService {
             throw new IllegalArgumentException("User is registered as " + actualRole + ", not " + role.toUpperCase());
         }
         
+        // Additional validation for managers - check admin approval
+        if (user.getRole() == UserRole.PROPERTY_MANAGER) {
+            ManagerProfile managerProfile = managerProfileRepository.findByUser(user)
+                    .orElseThrow(() -> new IllegalArgumentException("Manager profile not found"));
+            
+            if (!managerProfile.isApproved()) {
+                if (managerProfile.isPending()) {
+                    throw new IllegalArgumentException("Your manager account is pending admin approval. Please wait for approval.");
+                } else if (managerProfile.isRejected()) {
+                    String reason = managerProfile.getRejectionReason() != null ? 
+                                  " Reason: " + managerProfile.getRejectionReason() : "";
+                    throw new IllegalArgumentException("Your manager account has been rejected." + reason);
+                } else {
+                    throw new IllegalArgumentException("Your manager account is not approved. Please contact admin.");
+                }
+            }
+        }
+        
         return user;
     }
 }
