@@ -34,6 +34,10 @@ public interface ManagerProfileRepository extends JpaRepository<ManagerProfile, 
     
     List<ManagerProfile> findByProfileCompleted(Boolean profileCompleted);
     
+    List<ManagerProfile> findByApprovalStatus(String approvalStatus);
+    
+    List<ManagerProfile> findByAdminApproved(Boolean adminApproved);
+    
     @Query("SELECT mp FROM ManagerProfile mp WHERE mp.businessVerified = true AND mp.documentsVerified = true")
     List<ManagerProfile> findFullyVerifiedProfiles();
     

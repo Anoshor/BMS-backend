@@ -41,6 +41,13 @@ public class AuthController {
             
             User user = userService.createUser(request);
             
+            // For managers, don't return tokens until admin approval
+            if (user.getRole() == UserRole.PROPERTY_MANAGER) {
+                return ResponseEntity.ok(ApiResponse.success(null, 
+                    "Manager registration successful. Please verify your email and phone. Your account will be activated once approved by admin."));
+            }
+            
+            // For tenants, proceed with normal flow
             DeviceType deviceType = DeviceType.fromCode(request.getDeviceType());
             String accessToken = jwtService.generateAccessToken(user);
             String refreshToken = jwtService.generateRefreshToken(user, request.getDeviceId(), deviceType);
@@ -50,15 +57,12 @@ public class AuthController {
                     .refreshToken(refreshToken)
                     .user(UserDto.from(user))
                     .requiresVerification(true)
-                    .requiresDocuments(user.getRole() == UserRole.PROPERTY_MANAGER)
+                    .requiresDocuments(false)
                     .expiresIn(jwtService.getAccessTokenExpiration())
                     .build();
             
-            String message = user.getRole() == UserRole.PROPERTY_MANAGER ? 
-                    "Manager registration successful. Please verify your email and phone, then add property details." :
-                    "Tenant registration successful. Please verify your email and phone.";
-            
-            return ResponseEntity.ok(ApiResponse.success(authResponse, message));
+            return ResponseEntity.ok(ApiResponse.success(authResponse, 
+                "Tenant registration successful. Please verify your email and phone."));
             
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
