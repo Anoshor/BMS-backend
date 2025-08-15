@@ -50,7 +50,7 @@ public class UserService {
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
-        user.setDateOfBirth(request.getDob().toLocalDate());
+        user.setDateOfBirth(request.getDob());
         user.setAccountStatus(AccountStatus.PENDING);
         user.setEmailVerified(false);
         user.setPhoneVerified(false);
@@ -85,7 +85,7 @@ public class UserService {
         user.setRole(UserRole.TENANT);
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
-        user.setDateOfBirth(request.getDob().toLocalDate());
+        user.setDateOfBirth(request.getDob());
         user.setAccountStatus(AccountStatus.PENDING);
         user.setEmailVerified(false);
         user.setPhoneVerified(false);
@@ -113,7 +113,7 @@ public class UserService {
         user.setRole(UserRole.PROPERTY_MANAGER);
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
-        user.setDateOfBirth(request.getDob().toLocalDate());
+        user.setDateOfBirth(request.getDob());
         user.setAccountStatus(AccountStatus.PENDING);
         user.setEmailVerified(false);
         user.setPhoneVerified(false);
@@ -300,6 +300,10 @@ public class UserService {
         if (user.getRole() == UserRole.PROPERTY_MANAGER) {
             ManagerProfile managerProfile = managerProfileRepository.findByUser(user)
                     .orElseThrow(() -> new IllegalArgumentException("Manager profile not found"));
+            
+            System.out.println("Manager approval status: " + managerProfile.getApprovalStatus());
+            System.out.println("Manager admin approved: " + managerProfile.getAdminApproved());
+            System.out.println("Manager is approved: " + managerProfile.isApproved());
             
             if (!managerProfile.isApproved()) {
                 if (managerProfile.isPending()) {

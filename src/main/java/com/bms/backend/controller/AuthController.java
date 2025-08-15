@@ -133,6 +133,7 @@ public class AuthController {
             return ResponseEntity.ok(ApiResponse.success(authResponse, "Login successful"));
             
         } catch (Exception e) {
+            e.printStackTrace(); // Add logging to see the actual error
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("Login failed. Please try again."));
         }

@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Data
 @Builder
@@ -19,7 +19,7 @@ public class TenantRegistrationRequest {
     private String email;
 
     @NotBlank(message = "Contact number is required")
-    @Pattern(regexp = "^[6-9]\\d{9}$", message = "Invalid contact number format")
+    @Pattern(regexp = "^[0-9]{10}$", message = "Contact number must be 10 digits")
     private String contactNum;
 
     @NotBlank(message = "Password is required")
@@ -36,7 +36,7 @@ public class TenantRegistrationRequest {
 
     @NotNull(message = "Date of birth is required")
     @Past(message = "Date of birth must be in the past")
-    private LocalDateTime dob;
+    private LocalDate dob;
 
     @NotBlank(message = "Gender is required")
     @Pattern(regexp = "^(male|female|other)$", message = "Gender must be male, female, or other")

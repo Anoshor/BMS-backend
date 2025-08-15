@@ -85,4 +85,21 @@ public class AdminController {
                     .body(ApiResponse.error("Failed to retrieve manager status"));
         }
     }
+    
+    @GetMapping("/debug/user/{email}")
+    public ResponseEntity<ApiResponse<String>> debugUserStatus(
+            @PathVariable String email) {
+        
+        try {
+            ManagerApprovalDto manager = adminService.getManagerStatus(email);
+            String debug = String.format("Manager: %s, Status: %s, Approved: %s", 
+                                       manager.getManagerEmail(), 
+                                       manager.getApprovalStatus(), 
+                                       manager.getAdminApproved());
+            return ResponseEntity.ok(ApiResponse.success(debug, "Debug info"));
+            
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.success("Error: " + e.getMessage(), "Debug info"));
+        }
+    }
 }
