@@ -6,7 +6,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 @Data
 @Builder
@@ -19,7 +21,7 @@ public class SignupRequest {
     private String email;
 
     @NotBlank(message = "Contact number is required")
-    @Pattern(regexp = "^[6-9]\\d{9}$", message = "Invalid contact number format")
+    @Pattern(regexp = "^[0-9]{10}$", message = "Contact number must be 10 digits")
     private String contactNum;
 
     @NotBlank(message = "Password is required")
@@ -36,6 +38,7 @@ public class SignupRequest {
 
     @NotNull(message = "Date of birth is required")
     @Past(message = "Date of birth must be in the past")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private LocalDateTime dob;
 
     @NotBlank(message = "Gender is required")
