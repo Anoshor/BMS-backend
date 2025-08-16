@@ -57,6 +57,10 @@ public class User {
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
     
+    @Column(name = "gender")
+    @Pattern(regexp = "^(male|female|other)$", message = "Gender must be male, female, or other")
+    private String gender;
+    
     @Column(name = "profile_image_url")
     private String profileImageUrl;
     
@@ -181,6 +185,14 @@ public class User {
     
     public void setDateOfBirth(LocalDate dateOfBirth) {
         this.dateOfBirth = dateOfBirth;
+    }
+    
+    public String getGender() {
+        return gender;
+    }
+    
+    public void setGender(String gender) {
+        this.gender = gender;
     }
     
     public String getProfileImageUrl() {
