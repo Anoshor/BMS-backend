@@ -50,7 +50,7 @@ public class UserService {
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
-        user.setDateOfBirth(request.getDob());
+        user.setDateOfBirth(request.getDob().toLocalDate());
         user.setAccountStatus(AccountStatus.PENDING);
         user.setEmailVerified(false);
         user.setPhoneVerified(false);
