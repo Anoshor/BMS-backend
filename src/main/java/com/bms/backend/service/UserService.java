@@ -51,6 +51,7 @@ public class UserService {
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setDateOfBirth(request.getDob().toLocalDate());
+        user.setGender(request.getGender());
         user.setAccountStatus(AccountStatus.PENDING);
         user.setEmailVerified(false);
         user.setPhoneVerified(false);
@@ -86,6 +87,7 @@ public class UserService {
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setDateOfBirth(request.getDob());
+        user.setGender(request.getGender());
         user.setAccountStatus(AccountStatus.PENDING);
         user.setEmailVerified(false);
         user.setPhoneVerified(false);
@@ -114,6 +116,7 @@ public class UserService {
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setDateOfBirth(request.getDob());
+        user.setGender(request.getGender());
         user.setAccountStatus(AccountStatus.PENDING);
         user.setEmailVerified(false);
         user.setPhoneVerified(false);

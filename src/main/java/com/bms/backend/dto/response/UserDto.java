@@ -18,6 +18,7 @@ public class UserDto {
     private boolean phoneVerified;
     private String profileImageUrl;
     private LocalDate dateOfBirth;
+    private String gender;
     private Instant createdAt;
     private Instant lastLogin;
     
@@ -38,6 +39,7 @@ public class UserDto {
         dto.phoneVerified = Boolean.TRUE.equals(user.getPhoneVerified());
         dto.profileImageUrl = user.getProfileImageUrl();
         dto.dateOfBirth = user.getDateOfBirth();
+        dto.gender = user.getGender();
         dto.createdAt = user.getCreatedAt();
         dto.lastLogin = user.getLastLogin();
         return dto;
@@ -60,6 +62,7 @@ public class UserDto {
         private boolean phoneVerified;
         private String profileImageUrl;
         private LocalDate dateOfBirth;
+        private String gender;
         private Instant createdAt;
         private Instant lastLogin;
         
@@ -118,6 +121,11 @@ public class UserDto {
             return this;
         }
         
+        public UserDtoBuilder gender(String gender) {
+            this.gender = gender;
+            return this;
+        }
+        
         public UserDtoBuilder createdAt(Instant createdAt) {
             this.createdAt = createdAt;
             return this;
@@ -141,6 +149,7 @@ public class UserDto {
             dto.phoneVerified = this.phoneVerified;
             dto.profileImageUrl = this.profileImageUrl;
             dto.dateOfBirth = this.dateOfBirth;
+            dto.gender = this.gender;
             dto.createdAt = this.createdAt;
             dto.lastLogin = this.lastLogin;
             return dto;
@@ -234,6 +243,14 @@ public class UserDto {
     
     public void setDateOfBirth(LocalDate dateOfBirth) {
         this.dateOfBirth = dateOfBirth;
+    }
+    
+    public String getGender() {
+        return gender;
+    }
+    
+    public void setGender(String gender) {
+        this.gender = gender;
     }
     
     public Instant getCreatedAt() {
