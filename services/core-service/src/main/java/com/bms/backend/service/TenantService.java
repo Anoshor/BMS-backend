@@ -1,11 +1,11 @@
 package com.bms.backend.service;
 
 import com.bms.backend.dto.request.ConnectTenantRequest;
-import com.bms.backend.entity.ManagerProfile;
+import com.bms.backend.entity.Property;
 import com.bms.backend.entity.TenantPropertyConnection;
 import com.bms.backend.entity.User;
 import com.bms.backend.enums.UserRole;
-import com.bms.backend.repository.ManagerProfileRepository;
+import com.bms.backend.repository.PropertyRepository;
 import com.bms.backend.repository.TenantPropertyConnectionRepository;
 import com.bms.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +25,7 @@ public class TenantService {
     private UserRepository userRepository;
 
     @Autowired
-    private ManagerProfileRepository managerProfileRepository;
+    private PropertyRepository propertyRepository;
 
     public TenantPropertyConnection connectTenantToProperty(User manager, ConnectTenantRequest request) {
         // Validate manager
@@ -47,8 +47,8 @@ public class TenantService {
         }
 
         // Check if property exists for this manager
-        ManagerProfile managerProfile = managerProfileRepository.findByUser(manager)
-                .orElseThrow(() -> new IllegalArgumentException("Manager profile not found"));
+        Property property = propertyRepository.findByPropertyNameAndManager(request.getPropertyName(), manager)
+                .orElseThrow(() -> new IllegalArgumentException("Property not found: " + request.getPropertyName()));
 
         // Create connection
         TenantPropertyConnection connection = new TenantPropertyConnection(

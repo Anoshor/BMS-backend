@@ -44,4 +44,49 @@ public class TenantRegistrationRequest {
 
     private String deviceType = "web";
     private String deviceId;
+
+    // Manual getter methods to fix Lombok compilation issues
+    public String getEmail() {
+        return email;
+    }
+
+    public String getContactNum() {
+        return contactNum;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public LocalDate getDob() {
+        return dob;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public String getDeviceType() {
+        return deviceType;
+    }
+
+    public void setDeviceType(String deviceType) {
+        this.deviceType = deviceType;
+    }
+
+    public String getDeviceId() {
+        return deviceId;
+    }
+
+    public void setDeviceId(String deviceId) {
+        this.deviceId = deviceId;
+    }
 }

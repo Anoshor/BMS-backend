@@ -1,87 +1,96 @@
-package com.bms.backend.dto.request;
+package com.bms.backend.entity;
 
-import jakarta.validation.constraints.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
 import java.math.BigDecimal;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class PropertyDetailsRequest {
-
-    @NotBlank(message = "Property name is required")
+@Entity
+@Table(name = "properties")
+public class Property {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manager_id", nullable = false)
+    @JsonIgnore
+    private User manager;
+    
+    @Column(name = "property_name", nullable = false)
     private String propertyName;
-
-    @NotBlank(message = "Property manager name is required")
+    
+    @Column(name = "property_manager_name")
     private String propertyManagerName;
-
-    @NotBlank(message = "Property address is required")
+    
+    @Column(name = "property_address", nullable = false)
     private String propertyAddress;
-
-    @NotBlank(message = "Property type is required")
-    @Pattern(regexp = "^(residential|commercial)$", message = "Property type must be residential or commercial")
+    
+    @Column(name = "property_type")
     private String propertyType;
-
-    @NotNull(message = "Square footage is required")
-    @Min(value = 1, message = "Square footage must be positive")
+    
+    @Column(name = "square_footage")
     private Integer squareFootage;
-
-    @NotNull(message = "Number of units is required")
-    @Min(value = 1, message = "Number of units must be positive")
+    
+    @Column(name = "number_of_units")
     private Integer numberOfUnits;
-
-    @NotBlank(message = "Unit number is required")
+    
+    @Column(name = "unit_number")
     private String unitNumber;
-
-    @NotBlank(message = "Unit type is required")
+    
+    @Column(name = "unit_type")
     private String unitType;
-
-    @NotNull(message = "Floor number is required")
-    @Min(value = 1, message = "Floor must be positive")
+    
+    @Column(name = "floor")
     private Integer floor;
-
-    @NotNull(message = "Number of bedrooms is required")
-    @Min(value = 0, message = "Bedrooms cannot be negative")
+    
+    @Column(name = "bedrooms")
     private Integer bedrooms;
-
-    @NotNull(message = "Number of bathrooms is required")
-    @Min(value = 0, message = "Bathrooms cannot be negative")
+    
+    @Column(name = "bathrooms")
     private Integer bathrooms;
-
-    @NotBlank(message = "Furnished status is required")
-    @Pattern(regexp = "^(furnished|semi-furnished|unfurnished)$", message = "Furnished must be furnished, semi-furnished, or unfurnished")
+    
+    @Column(name = "furnished")
     private String furnished;
-
-    @NotBlank(message = "Balcony status is required")
-    @Pattern(regexp = "^(yes|no)$", message = "Balcony must be yes or no")
+    
+    @Column(name = "balcony")
     private String balcony;
-
-    @NotNull(message = "Rent is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Rent must be positive")
+    
+    @Column(name = "rent", precision = 10, scale = 2)
     private BigDecimal rent;
-
-    @NotNull(message = "Security deposit is required")
-    @DecimalMin(value = "0.0", message = "Security deposit cannot be negative")
+    
+    @Column(name = "security_deposit", precision = 10, scale = 2)
     private BigDecimal securityDeposit;
-
-    @NotNull(message = "Maintenance charges are required")
-    @DecimalMin(value = "0.0", message = "Maintenance charges cannot be negative")
+    
+    @Column(name = "maintenance_charges", precision = 10, scale = 2)
     private BigDecimal maintenanceCharges;
-
-    @NotBlank(message = "Occupancy status is required")
-    @Pattern(regexp = "^(occupied|vacant|under-maintenance)$", message = "Occupancy must be occupied, vacant, or under-maintenance")
+    
+    @Column(name = "occupancy")
     private String occupancy;
+    
+    @Column(name = "utility_meter_number")
+    private Long utilityMeterNumber;
 
-    @NotNull(message = "Utility meter number is required")
-    @Min(value = 1, message = "Utility meter number must be positive")
-    private Integer utilityMeterNumber;
+    // Default constructor
+    public Property() {}
 
-    // Manual getters for key fields that Lombok might not be generating
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public User getManager() {
+        return manager;
+    }
+
+    public void setManager(User manager) {
+        this.manager = manager;
+    }
+
     public String getPropertyName() {
         return propertyName;
     }
@@ -218,11 +227,11 @@ public class PropertyDetailsRequest {
         this.occupancy = occupancy;
     }
 
-    public Integer getUtilityMeterNumber() {
+    public Long getUtilityMeterNumber() {
         return utilityMeterNumber;
     }
 
-    public void setUtilityMeterNumber(Integer utilityMeterNumber) {
+    public void setUtilityMeterNumber(Long utilityMeterNumber) {
         this.utilityMeterNumber = utilityMeterNumber;
     }
 }
