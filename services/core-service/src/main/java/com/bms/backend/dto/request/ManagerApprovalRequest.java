@@ -25,4 +25,21 @@ public class ManagerApprovalRequest {
     @NotBlank(message = "Admin email is required")
     @Email(message = "Invalid admin email format")
     private String adminEmail;
+
+    // Manual getter methods to fix Lombok compilation issues
+    public String getManagerEmail() {
+        return managerEmail;
+    }
+
+    public String getAction() {
+        return action;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public String getAdminEmail() {
+        return adminEmail;
+    }
 }

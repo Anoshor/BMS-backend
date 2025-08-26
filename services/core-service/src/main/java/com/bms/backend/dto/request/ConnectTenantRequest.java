@@ -38,4 +38,33 @@ public class ConnectTenantRequest {
     private Double securityDeposit;
 
     private String notes;
+
+    // Manual getter methods to fix Lombok compilation issues
+    public String getTenantEmail() {
+        return tenantEmail;
+    }
+
+    public String getPropertyName() {
+        return propertyName;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public Double getMonthlyRent() {
+        return monthlyRent;
+    }
+
+    public Double getSecurityDeposit() {
+        return securityDeposit;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
 }

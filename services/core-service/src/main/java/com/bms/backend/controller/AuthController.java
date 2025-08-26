@@ -1,6 +1,7 @@
 package com.bms.backend.controller;
 
 import com.bms.backend.dto.request.LoginRequest;
+import com.bms.backend.dto.request.RefreshTokenRequest;
 import com.bms.backend.dto.request.SignupRequest;
 import com.bms.backend.dto.response.ApiResponse;
 import com.bms.backend.dto.response.AuthResponse;
@@ -21,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/auth")
 @CrossOrigin(origins = "*")
 public class AuthController {
     
@@ -67,6 +68,7 @@ public class AuthController {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("Registration failed. Please try again."));
         }
@@ -139,9 +141,11 @@ public class AuthController {
     
     @PostMapping("/refresh-token")
     public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(
-            @RequestParam String refreshToken) {
+            @RequestBody @Valid RefreshTokenRequest request) {
         
         try {
+            String refreshToken = request.getRefreshToken();
+            
             // Validate refresh token
             if (!jwtService.isValidToken(refreshToken) || !jwtService.isRefreshToken(refreshToken)) {
                 return ResponseEntity.badRequest()
@@ -187,7 +191,7 @@ public class AuthController {
     
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<String>> logout(
-            @RequestParam String refreshToken) {
+            @RequestBody @Valid RefreshTokenRequest request) {
         
         try {
             // In a complete implementation, you would:
@@ -206,11 +210,11 @@ public class AuthController {
     
     @PostMapping("/logout-all-devices")
     public ResponseEntity<ApiResponse<String>> logoutAllDevices(
-            @RequestParam String refreshToken) {
+            @RequestBody @Valid RefreshTokenRequest request) {
         
         try {
             // Extract user from token
-            String userId = jwtService.extractUserId(refreshToken);
+            String userId = jwtService.extractUserId(request.getRefreshToken());
             
             // In a complete implementation, you would:
             // 1. Revoke all refresh tokens for this user

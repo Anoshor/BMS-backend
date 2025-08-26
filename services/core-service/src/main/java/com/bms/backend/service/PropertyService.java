@@ -1,39 +1,34 @@
 package com.bms.backend.service;
 
 import com.bms.backend.dto.request.PropertyDetailsRequest;
-import com.bms.backend.entity.ManagerProfile;
-import com.bms.backend.entity.TenantPropertyConnection;
+import com.bms.backend.entity.Property;
 import com.bms.backend.entity.User;
 import com.bms.backend.enums.UserRole;
-import com.bms.backend.repository.ManagerProfileRepository;
-import com.bms.backend.repository.TenantPropertyConnectionRepository;
+import com.bms.backend.repository.PropertyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
 public class PropertyService {
 
     @Autowired
-    private ManagerProfileRepository managerProfileRepository;
-
-    @Autowired
-    private TenantPropertyConnectionRepository connectionRepository;
+    private PropertyRepository propertyRepository;
 
     public void addPropertyDetails(User user, PropertyDetailsRequest request) {
         if (user.getRole() != UserRole.PROPERTY_MANAGER) {
             throw new IllegalArgumentException("Only managers can add property details");
         }
 
-        ManagerProfile profile = managerProfileRepository.findByUser(user)
-                .orElseThrow(() -> new IllegalArgumentException("Manager profile not found"));
-
-        updateManagerProfileWithPropertyDetails(profile, request);
-        managerProfileRepository.save(profile);
+        Property property = new Property();
+        property.setManager(user);
+        mapRequestToProperty(property, request);
+        
+        propertyRepository.save(property);
     }
 
     public void updatePropertyDetails(User user, PropertyDetailsRequest request) {
@@ -41,36 +36,39 @@ public class PropertyService {
             throw new IllegalArgumentException("Only managers can update property details");
         }
 
-        ManagerProfile profile = managerProfileRepository.findByUser(user)
-                .orElseThrow(() -> new IllegalArgumentException("Manager profile not found"));
+        Property property = propertyRepository.findByPropertyNameAndManager(request.getPropertyName(), user)
+                .orElseThrow(() -> new IllegalArgumentException("Property not found"));
 
-        updateManagerProfileWithPropertyDetails(profile, request);
-        managerProfileRepository.save(profile);
+        mapRequestToProperty(property, request);
+        propertyRepository.save(property);
     }
 
-    private void updateManagerProfileWithPropertyDetails(ManagerProfile profile, PropertyDetailsRequest request) {
-        profile.setCompanyName(request.getPropertyName());
-        profile.setBusinessLicenseNumber(request.getPropertyManagerName());
-        profile.setBusinessAddress(request.getPropertyAddress());
-        profile.setProfileCompleted(true);
+    private void mapRequestToProperty(Property property, PropertyDetailsRequest request) {
+        property.setPropertyName(request.getPropertyName());
+        property.setPropertyManagerName(request.getPropertyManagerName());
+        property.setPropertyAddress(request.getPropertyAddress());
+        property.setPropertyType(request.getPropertyType());
+        property.setSquareFootage(request.getSquareFootage());
+        property.setNumberOfUnits(request.getNumberOfUnits());
+        property.setUnitNumber(request.getUnitNumber());
+        property.setUnitType(request.getUnitType());
+        property.setFloor(request.getFloor());
+        property.setBedrooms(request.getBedrooms());
+        property.setBathrooms(request.getBathrooms());
+        property.setFurnished(request.getFurnished());
+        property.setBalcony(request.getBalcony());
+        property.setRent(request.getRent());
+        property.setSecurityDeposit(request.getSecurityDeposit());
+        property.setMaintenanceCharges(request.getMaintenanceCharges());
+        property.setOccupancy(request.getOccupancy());
+        property.setUtilityMeterNumber(request.getUtilityMeterNumber().longValue());
     }
 
-    public List<ManagerProfile> getUnoccupiedProperties(User manager) {
+    public List<Property> getUnoccupiedProperties(User manager) {
         if (manager.getRole() != UserRole.PROPERTY_MANAGER) {
             throw new IllegalArgumentException("Only managers can view their properties");
         }
 
-        // Get manager profile
-        ManagerProfile managerProfile = managerProfileRepository.findByUser(manager)
-                .orElseThrow(() -> new IllegalArgumentException("Manager profile not found"));
-
-        // For now, return the manager's properties
-        // In a real implementation, you would have a separate Property entity
-        // and check which ones are not occupied based on TenantPropertyConnection
-        List<TenantPropertyConnection> occupiedProperties = connectionRepository.findByManagerAndIsActive(manager, true);
-        
-        // For simplicity, just return manager profile if no properties are occupied
-        // In a real system, you'd have a proper Property entity
-        return List.of(managerProfile);
+        return propertyRepository.findVacantPropertiesByManager(manager);
     }
 }

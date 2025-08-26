@@ -1,7 +1,8 @@
 package com.bms.backend.dto.response;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 public class ApiResponse<T> {
     
@@ -9,12 +10,13 @@ public class ApiResponse<T> {
     private T data;
     private String message;
     private List<String> errors;
-    private Instant timestamp;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime timestamp;
     private String path;
     
     // Constructors
     public ApiResponse() {
-        this.timestamp = Instant.now();
+        this.timestamp = LocalDateTime.now();
     }
     
     public ApiResponse(boolean success, T data, String message) {
@@ -121,11 +123,11 @@ public class ApiResponse<T> {
         this.errors = errors;
     }
     
-    public Instant getTimestamp() {
+    public LocalDateTime getTimestamp() {
         return timestamp;
     }
     
-    public void setTimestamp(Instant timestamp) {
+    public void setTimestamp(LocalDateTime timestamp) {
         this.timestamp = timestamp;
     }
     

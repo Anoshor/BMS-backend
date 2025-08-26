@@ -36,17 +36,22 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints - Authentication (except profile)
-                        .requestMatchers("/api/v1/auth/signup", "/api/v1/auth/login", 
-                                       "/api/v1/auth/refresh-token", "/api/v1/auth/logout",
-                                       "/api/v1/auth/logout-all-devices", "/api/v1/auth/verify-email",
-                                       "/api/v1/auth/verify-phone").permitAll()
+                        // Authentication endpoints that require authentication
+                        .requestMatchers("/auth/profile").authenticated()
                         
-                        // Profile endpoint requires authentication
-                        .requestMatchers("/api/v1/auth/profile").authenticated()
+                        // Public authentication endpoints
+                        // Note: context-path is /api/v1, so actual paths are relative to that
+                        .requestMatchers("/auth/signup", "/auth/login", 
+                                       "/auth/refresh-token", "/auth/logout",
+                                       "/auth/logout-all-devices", "/auth/verify-email",
+                                       "/auth/verify-phone",
+                                       "/auth/manager/register", "/auth/manager/verify-email", "/auth/manager/verify-phone",
+                                       "/auth/manager/resend-email-verification", "/auth/manager/resend-phone-verification",
+                                       "/auth/tenant/register", "/auth/tenant/verify-email", "/auth/tenant/verify-phone", 
+                                       "/auth/tenant/resend-email-verification", "/auth/tenant/resend-phone-verification").permitAll()
 
                         // Health check and monitoring
-                        .requestMatchers("/api/v1/health").permitAll()
+                        .requestMatchers("/health").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
 
                         // H2 Console (for development)
@@ -61,16 +66,22 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
 
                         // Tenant specific endpoints - Use hasAuthority instead of hasRole
-                        .requestMatchers("/api/v1/tenant/**").hasAuthority("TENANT")
+                        .requestMatchers("/tenant/**").hasAuthority("TENANT")
 
                         // Manager specific endpoints
-                        .requestMatchers("/api/v1/manager/**").hasAnyAuthority("PROPERTY_MANAGER", "BUILDING_OWNER")
+                        .requestMatchers("/manager/**").hasAnyAuthority("PROPERTY_MANAGER", "BUILDING_OWNER")
 
                         // Building owner specific endpoints
-                        .requestMatchers("/api/v1/owner/**").hasAuthority("BUILDING_OWNER")
+                        .requestMatchers("/owner/**").hasAuthority("BUILDING_OWNER")
 
                         // Admin endpoints - For now allow all (in production add proper admin auth)
-                        .requestMatchers("/api/v1/admin/**").permitAll()
+                        .requestMatchers("/admin/**").permitAll()
+                        
+                        // Property endpoints (accessible by authenticated managers)
+                        .requestMatchers("/properties/**").authenticated()
+                        
+                        // Tenant endpoints (accessible by authenticated managers and tenants)
+                        .requestMatchers("/tenants/**").authenticated()
 
                         // All other requests need authentication
                         .anyRequest().authenticated()

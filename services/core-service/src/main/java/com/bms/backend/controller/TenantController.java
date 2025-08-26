@@ -9,15 +9,15 @@ import com.bms.backend.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/v1/tenants")
+@RequestMapping("/tenants")
 @CrossOrigin(origins = "*")
 public class TenantController {
 
@@ -29,23 +29,20 @@ public class TenantController {
 
     @PostMapping("/connect")
     public ResponseEntity<ApiResponse<String>> connectTenantToProperty(
-            @RequestBody @Valid ConnectTenantRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @RequestBody @Valid ConnectTenantRequest request) {
 
         try {
-            Optional<User> managerOpt = userService.findByEmailOrPhone(userDetails.getUsername());
-            if (managerOpt.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Manager not found"));
-            }
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User manager = (User) authentication.getPrincipal();
 
-            tenantService.connectTenantToProperty(managerOpt.get(), request);
+            tenantService.connectTenantToProperty(manager, request);
             return ResponseEntity.ok(ApiResponse.success(null, "Tenant connected to property successfully"));
 
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("Failed to connect tenant to property"));
         }
@@ -53,17 +50,13 @@ public class TenantController {
 
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<List<TenantPropertyConnection>>> searchTenants(
-            @RequestParam(required = false) String searchText,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @RequestParam(required = false) String searchText) {
 
         try {
-            Optional<User> managerOpt = userService.findByEmailOrPhone(userDetails.getUsername());
-            if (managerOpt.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Manager not found"));
-            }
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User manager = (User) authentication.getPrincipal();
 
-            List<TenantPropertyConnection> connections = tenantService.searchTenants(managerOpt.get(), searchText);
+            List<TenantPropertyConnection> connections = tenantService.searchTenants(manager, searchText);
             return ResponseEntity.ok(ApiResponse.success(connections, "Tenants retrieved successfully"));
 
         } catch (IllegalArgumentException e) {
@@ -76,17 +69,13 @@ public class TenantController {
     }
 
     @GetMapping("/my-properties")
-    public ResponseEntity<ApiResponse<List<TenantPropertyConnection>>> getTenantProperties(
-            @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<ApiResponse<List<TenantPropertyConnection>>> getTenantProperties() {
 
         try {
-            Optional<User> tenantOpt = userService.findByEmailOrPhone(userDetails.getUsername());
-            if (tenantOpt.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Tenant not found"));
-            }
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User tenant = (User) authentication.getPrincipal();
 
-            List<TenantPropertyConnection> properties = tenantService.getTenantProperties(tenantOpt.get());
+            List<TenantPropertyConnection> properties = tenantService.getTenantProperties(tenant);
             return ResponseEntity.ok(ApiResponse.success(properties, "Properties retrieved successfully"));
 
         } catch (IllegalArgumentException e) {
