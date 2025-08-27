@@ -1,0 +1,51 @@
+# Build artifacts
+target/
+*.jar
+*.war
+*.ear
+*.class
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+logs/
+
+# Database files (we'll use volume for persistence)
+*.db
+*.h2.db
+*.trace.db
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Documentation (not needed in container)
+README.md
+*.md
+
+# Docker files (not needed inside container)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Test files
+src/test/
+
+# Maven files (will be downloaded in container)
+.m2/

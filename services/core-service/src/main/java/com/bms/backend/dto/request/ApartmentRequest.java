@@ -24,7 +24,7 @@ public class ApartmentRequest {
     private Integer bedrooms;
     
     @Positive(message = "Bathrooms must be positive")
-    private Integer bathrooms;
+    private BigDecimal bathrooms; // Support half baths like 2.5
     
     private Integer squareFootage;
     
@@ -40,7 +40,9 @@ public class ApartmentRequest {
     
     private String occupancyStatus;
     
-    private String utilityMeterNumber;
+    private String utilityMeterNumbers; // JSON format: {"electric":"123", "gas":"456", "water":"789"}
+    
+    private String documents; // JSON format: [{"name":"lease.pdf","url":"s3://...","type":"lease"}]
     
     private String tenantName;
     
@@ -92,11 +94,11 @@ public class ApartmentRequest {
         this.bedrooms = bedrooms;
     }
 
-    public Integer getBathrooms() {
+    public BigDecimal getBathrooms() {
         return bathrooms;
     }
 
-    public void setBathrooms(Integer bathrooms) {
+    public void setBathrooms(BigDecimal bathrooms) {
         this.bathrooms = bathrooms;
     }
 
@@ -156,12 +158,20 @@ public class ApartmentRequest {
         this.occupancyStatus = occupancyStatus;
     }
 
-    public String getUtilityMeterNumber() {
-        return utilityMeterNumber;
+    public String getUtilityMeterNumbers() {
+        return utilityMeterNumbers;
     }
 
-    public void setUtilityMeterNumber(String utilityMeterNumber) {
-        this.utilityMeterNumber = utilityMeterNumber;
+    public void setUtilityMeterNumbers(String utilityMeterNumbers) {
+        this.utilityMeterNumbers = utilityMeterNumbers;
+    }
+
+    public String getDocuments() {
+        return documents;
+    }
+
+    public void setDocuments(String documents) {
+        this.documents = documents;
     }
 
     public String getTenantName() {
