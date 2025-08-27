@@ -29,7 +29,10 @@ public class PropertyBuilding {
     private String address;
     
     @Column(name = "property_type")
-    private String propertyType; // residential, commercial, mixed
+    private String propertyType; // apartment complex, single family, etc.
+    
+    @Column(name = "residential_type")
+    private String residentialType; // residential, commercial, mixed use
     
     @Column(name = "total_units")
     private Integer totalUnits;
@@ -46,6 +49,10 @@ public class PropertyBuilding {
     @OneToMany(mappedBy = "property", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Apartment> apartments;
+    
+    @OneToMany(mappedBy = "property", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<PropertyImage> images;
     
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -99,6 +106,14 @@ public class PropertyBuilding {
         this.propertyType = propertyType;
     }
 
+    public String getResidentialType() {
+        return residentialType;
+    }
+
+    public void setResidentialType(String residentialType) {
+        this.residentialType = residentialType;
+    }
+
     public Integer getTotalUnits() {
         return totalUnits;
     }
@@ -137,6 +152,14 @@ public class PropertyBuilding {
 
     public void setApartments(List<Apartment> apartments) {
         this.apartments = apartments;
+    }
+
+    public List<PropertyImage> getImages() {
+        return images;
+    }
+
+    public void setImages(List<PropertyImage> images) {
+        this.images = images;
     }
 
     public Instant getCreatedAt() {

@@ -14,6 +14,8 @@ public class PropertyBuildingRequest {
     
     private String propertyType;
     
+    private String residentialType;
+    
     @Positive(message = "Total units must be positive")
     private Integer totalUnits;
     
@@ -50,6 +52,14 @@ public class PropertyBuildingRequest {
 
     public void setPropertyType(String propertyType) {
         this.propertyType = propertyType;
+    }
+
+    public String getResidentialType() {
+        return residentialType;
+    }
+
+    public void setResidentialType(String residentialType) {
+        this.residentialType = residentialType;
     }
 
     public Integer getTotalUnits() {

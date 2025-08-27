@@ -65,14 +65,14 @@ public class SecurityConfig {
                         // Error endpoint
                         .requestMatchers("/error").permitAll()
 
-                        // Tenant specific endpoints - Use hasAuthority instead of hasRole
-                        .requestMatchers("/tenant/**").hasAuthority("TENANT")
+                        // Tenant specific endpoints - Use hasRole which expects ROLE_ prefix
+                        .requestMatchers("/tenant/**").hasRole("TENANT")
 
                         // Manager specific endpoints
-                        .requestMatchers("/manager/**").hasAnyAuthority("PROPERTY_MANAGER", "BUILDING_OWNER")
+                        .requestMatchers("/manager/**").hasAnyRole("PROPERTY_MANAGER", "BUILDING_OWNER")
 
                         // Building owner specific endpoints
-                        .requestMatchers("/owner/**").hasAuthority("BUILDING_OWNER")
+                        .requestMatchers("/owner/**").hasRole("BUILDING_OWNER")
 
                         // Admin endpoints - For now allow all (in production add proper admin auth)
                         .requestMatchers("/admin/**").permitAll()

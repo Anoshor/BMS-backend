@@ -7,6 +7,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -34,8 +35,8 @@ public class Apartment {
     @Column(name = "bedrooms")
     private Integer bedrooms;
     
-    @Column(name = "bathrooms")
-    private Integer bathrooms;
+    @Column(name = "bathrooms", precision = 3, scale = 1)
+    private BigDecimal bathrooms; // Support half baths like 2.5
     
     @Column(name = "square_footage")
     private Integer squareFootage;
@@ -58,8 +59,8 @@ public class Apartment {
     @Column(name = "occupancy_status")
     private String occupancyStatus; // vacant, occupied, maintenance
     
-    @Column(name = "utility_meter_number")
-    private String utilityMeterNumber;
+    @Column(name = "utility_meter_numbers", columnDefinition = "TEXT")
+    private String utilityMeterNumbers; // JSON string: {"electric":"123", "gas":"456", "water":"789"}
     
     @Column(name = "tenant_name")
     private String tenantName;
@@ -69,6 +70,13 @@ public class Apartment {
     
     @Column(name = "tenant_phone")
     private String tenantPhone;
+    
+    @Column(name = "documents", columnDefinition = "TEXT")
+    private String documents; // JSON string for document URLs/metadata: [{"name":"lease.pdf","url":"s3://...","type":"lease"}]
+    
+    @OneToMany(mappedBy = "apartment", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<ApartmentDocument> apartmentDocuments;
     
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -130,11 +138,11 @@ public class Apartment {
         this.bedrooms = bedrooms;
     }
 
-    public Integer getBathrooms() {
+    public BigDecimal getBathrooms() {
         return bathrooms;
     }
 
-    public void setBathrooms(Integer bathrooms) {
+    public void setBathrooms(BigDecimal bathrooms) {
         this.bathrooms = bathrooms;
     }
 
@@ -194,12 +202,12 @@ public class Apartment {
         this.occupancyStatus = occupancyStatus;
     }
 
-    public String getUtilityMeterNumber() {
-        return utilityMeterNumber;
+    public String getUtilityMeterNumbers() {
+        return utilityMeterNumbers;
     }
 
-    public void setUtilityMeterNumber(String utilityMeterNumber) {
-        this.utilityMeterNumber = utilityMeterNumber;
+    public void setUtilityMeterNumbers(String utilityMeterNumbers) {
+        this.utilityMeterNumbers = utilityMeterNumbers;
     }
 
     public String getTenantName() {
@@ -224,6 +232,22 @@ public class Apartment {
 
     public void setTenantPhone(String tenantPhone) {
         this.tenantPhone = tenantPhone;
+    }
+
+    public String getDocuments() {
+        return documents;
+    }
+
+    public void setDocuments(String documents) {
+        this.documents = documents;
+    }
+
+    public List<ApartmentDocument> getApartmentDocuments() {
+        return apartmentDocuments;
+    }
+
+    public void setApartmentDocuments(List<ApartmentDocument> apartmentDocuments) {
+        this.apartmentDocuments = apartmentDocuments;
     }
 
     public Instant getCreatedAt() {

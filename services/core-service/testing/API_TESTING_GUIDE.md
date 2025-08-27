@@ -211,6 +211,7 @@ curl -X POST "http://localhost:8080/api/v1/properties/buildings" \
     "name": "Sunset Heights",
     "address": "456 Oak Avenue, Downtown",
     "propertyType": "Apartment Complex",
+    "residentialType": "residential",
     "totalUnits": 100,
     "totalFloors": 10,
     "yearBuilt": 2015,
@@ -265,7 +266,7 @@ curl -X POST "http://localhost:8080/api/v1/apartments" \
     "unitType": "2BHK",
     "floor": 1,
     "bedrooms": 2,
-    "bathrooms": 2,
+    "bathrooms": 2.5,
     "squareFootage": 1200,
     "furnished": "Semi-Furnished",
     "balcony": "Yes",
@@ -273,7 +274,8 @@ curl -X POST "http://localhost:8080/api/v1/apartments" \
     "securityDeposit": 5000.00,
     "maintenanceCharges": 300.00,
     "occupancyStatus": "VACANT",
-    "utilityMeterNumber": "MTR12345"
+    "utilityMeterNumbers": "{\"electric\":\"ELE123\",\"gas\":\"GAS456\",\"water\":\"WAT789\"}",
+    "documents": "[{\"name\":\"lease.pdf\",\"url\":\"s3://bucket/lease.pdf\",\"type\":\"lease\"},{\"name\":\"inspection.jpg\",\"url\":\"s3://bucket/inspection.jpg\",\"type\":\"inspection\"}]"
   }'
 ```
 
@@ -701,3 +703,54 @@ curl --location 'http://localhost:8080/api/v1/tenant/dashboard/notifications/unr
 - Tenant dashboard APIs return `MaintenanceRequestResponse` DTOs to avoid Hibernate serialization issues
 - All tenant APIs automatically filter data to show only requests belonging to the authenticated tenant
 - Notification endpoints return counts and recent updates for integration with notification service
+
+## Enhanced Schema Features
+
+### PropertyBuilding Enhancements
+- **residentialType**: New field for residential/commercial/mixed use classification
+- **Property Images**: Support for multiple property images via PropertyImage entity
+- **Document Storage**: Ready for S3/third-party integration
+
+### Apartment/Unit Enhancements  
+- **Half Bathrooms**: Support for decimal values like 2.5 bathrooms
+- **Multiple Utility Meters**: JSON format for electric, gas, water, etc.
+- **Document Management**: JSON format for lease agreements, inspections, etc.
+- **Flexible Storage**: Both S3 URLs and base64 data for testing
+
+### New Data Formats
+
+#### Utility Meters JSON Example:
+```json
+{
+  "electric": "ELE123456",
+  "gas": "GAS789012", 
+  "water": "WAT345678",
+  "internet": "INT901234"
+}
+```
+
+#### Documents JSON Example:
+```json
+[
+  {
+    "name": "lease_agreement.pdf",
+    "url": "s3://bucket/documents/lease_agreement.pdf",
+    "type": "lease",
+    "uploadedAt": "2025-08-27T10:30:00Z"
+  },
+  {
+    "name": "inspection_report.jpg", 
+    "url": "s3://bucket/documents/inspection_report.jpg",
+    "type": "inspection",
+    "uploadedAt": "2025-08-27T11:00:00Z"
+  }
+]
+```
+
+### Property Types & Residential Types
+
+**Property Types**: apartment_complex, single_family, duplex, townhouse, condo
+**Residential Types**: residential, commercial, mixed_use
+**Unit Types**: studio, 1BHK, 2BHK, 3BHK, penthouse
+**Furnished Status**: furnished, semi_furnished, unfurnished
+**Occupancy Status**: vacant, occupied, maintenance, reserved

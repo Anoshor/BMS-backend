@@ -78,10 +78,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         if (user.isAccountActive() && user.isAccountNonLocked()) {
 
                             // Create authorities based on user role
-                            // Important: Use the role name directly without ROLE_ prefix
-                            // Spring Security will add it automatically
+                            // Important: Add ROLE_ prefix for @PreAuthorize annotations to work
                             List<SimpleGrantedAuthority> authorities = List.of(
-                                    new SimpleGrantedAuthority(user.getRole().name())
+                                    new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
                             );
 
                             // Create authentication token

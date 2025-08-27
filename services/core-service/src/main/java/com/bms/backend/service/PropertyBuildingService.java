@@ -24,6 +24,7 @@ PropertyBuildingService {
         property.setName(request.getName());
         property.setAddress(request.getAddress());
         property.setPropertyType(request.getPropertyType());
+        property.setResidentialType(request.getResidentialType());
         property.setTotalUnits(request.getTotalUnits());
         property.setTotalFloors(request.getTotalFloors());
         property.setYearBuilt(request.getYearBuilt());

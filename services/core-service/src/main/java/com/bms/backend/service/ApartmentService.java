@@ -44,7 +44,8 @@ public class ApartmentService {
         apartment.setSecurityDeposit(request.getSecurityDeposit());
         apartment.setMaintenanceCharges(request.getMaintenanceCharges());
         apartment.setOccupancyStatus(request.getOccupancyStatus());
-        apartment.setUtilityMeterNumber(request.getUtilityMeterNumber());
+        apartment.setUtilityMeterNumbers(request.getUtilityMeterNumbers());
+        apartment.setDocuments(request.getDocuments());
         apartment.setTenantName(request.getTenantName());
         apartment.setTenantEmail(request.getTenantEmail());
         apartment.setTenantPhone(request.getTenantPhone());
@@ -118,7 +119,8 @@ public class ApartmentService {
         apartment.setSecurityDeposit(request.getSecurityDeposit());
         apartment.setMaintenanceCharges(request.getMaintenanceCharges());
         apartment.setOccupancyStatus(request.getOccupancyStatus());
-        apartment.setUtilityMeterNumber(request.getUtilityMeterNumber());
+        apartment.setUtilityMeterNumbers(request.getUtilityMeterNumbers());
+        apartment.setDocuments(request.getDocuments());
         apartment.setTenantName(request.getTenantName());
         apartment.setTenantEmail(request.getTenantEmail());
         apartment.setTenantPhone(request.getTenantPhone());
