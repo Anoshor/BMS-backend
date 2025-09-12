@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # Core Service
+  bms-core-service:
+    build:
+      context: ./services/core-service
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/bms_core
+      - SPRING_DATASOURCE_USERNAME=bms_user
+      - SPRING_DATASOURCE_PASSWORD=bms_password
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - bms-network
+
+  # Notification Service
+  bms-notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/bms_notifications
+      - SPRING_DATASOURCE_USERNAME=bms_user
+      - SPRING_DATASOURCE_PASSWORD=bms_password
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - bms-network
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_USER=bms_user
+      - MYSQL_PASSWORD=bms_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - bms-network
+
+  # Redis for caching and message queues
+  redis:
+    image: redis:7.0-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - bms-network
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  bms-network:
+    driver: bridge

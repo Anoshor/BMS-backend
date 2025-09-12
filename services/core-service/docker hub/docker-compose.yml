@@ -1,0 +1,15 @@
+services:
+  bms-backend:
+    image: anoshorpaul/bms-backend:latest
+    ports:
+      - "8082:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:h2:file:/app/data/bmsdb;DB_CLOSE_ON_EXIT=FALSE;DB_CLOSE_DELAY=-1
+      - JWT_SECRET=mySecretKey123456789012345678901234567890
+      - SPRING_H2_CONSOLE_ENABLED=true
+      - SPRING_H2_CONSOLE_SETTINGS_WEB_ALLOW_OTHERS=true
+    volumes:
+      - bms-data:/app/data
+
+volumes:
+  bms-data:
