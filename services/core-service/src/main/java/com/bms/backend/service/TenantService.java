@@ -2,6 +2,7 @@ package com.bms.backend.service;
 
 import com.bms.backend.dto.request.ConnectTenantRequest;
 import com.bms.backend.dto.response.TenantConnectionDto;
+import com.bms.backend.dto.response.TenantPropertyDto;
 import com.bms.backend.entity.Apartment;
 import com.bms.backend.entity.PropertyBuilding;
 import com.bms.backend.entity.TenantPropertyConnection;
@@ -108,6 +109,35 @@ public class TenantService {
         }
 
         return connectionRepository.findByTenantAndIsActive(tenant, true);
+    }
+
+    public List<TenantPropertyDto> getTenantPropertiesEnhanced(User tenant) {
+        if (tenant.getRole() != UserRole.TENANT) {
+            throw new IllegalArgumentException("Only tenants can view their properties");
+        }
+
+        List<TenantPropertyConnection> connections = connectionRepository.findByTenantAndIsActive(tenant, true);
+        
+        return connections.stream()
+                .map(connection -> {
+                    TenantPropertyDto dto = new TenantPropertyDto(connection);
+                    
+                    // Find apartment details based on tenant email and property name
+                    List<Apartment> apartments = apartmentRepository.findByTenantEmail(tenant.getEmail());
+                    for (Apartment apartment : apartments) {
+                        if (apartment.getProperty().getName().equals(connection.getPropertyName())) {
+                            dto.setPropertyId(apartment.getProperty().getId());
+                            dto.setApartmentId(apartment.getId());
+                            dto.setUnitId(apartment.getUnitNumber()); // Unit identifier (A101, B205, etc.)
+                            dto.setUnitNumber(apartment.getUnitNumber());
+                            dto.setPropertyAddress(apartment.getProperty().getAddress());
+                            break;
+                        }
+                    }
+                    
+                    return dto;
+                })
+                .toList();
     }
 
     public List<User> searchTenantsGlobal(User manager, String searchText) {
