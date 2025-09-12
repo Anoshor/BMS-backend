@@ -27,7 +27,13 @@ public class ApartmentService {
         Optional<PropertyBuilding> property = propertyBuildingRepository.findById(request.getPropertyId());
         
         if (property.isEmpty() || !property.get().getManager().getId().equals(manager.getId())) {
-            throw new RuntimeException("Property not found or not authorized");
+            throw new IllegalArgumentException("Property not found or not authorized");
+        }
+        
+        // Check if unit number already exists in this property
+        Optional<Apartment> existingApartment = apartmentRepository.findByPropertyAndUnitNumber(property.get(), request.getUnitNumber());
+        if (existingApartment.isPresent()) {
+            throw new IllegalArgumentException("Unit number '" + request.getUnitNumber() + "' already exists in this property");
         }
 
         Apartment apartment = new Apartment();

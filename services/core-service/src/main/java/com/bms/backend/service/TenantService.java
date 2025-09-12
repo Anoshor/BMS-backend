@@ -1,6 +1,7 @@
 package com.bms.backend.service;
 
 import com.bms.backend.dto.request.ConnectTenantRequest;
+import com.bms.backend.dto.response.TenantConnectionDto;
 import com.bms.backend.entity.Apartment;
 import com.bms.backend.entity.PropertyBuilding;
 import com.bms.backend.entity.TenantPropertyConnection;
@@ -121,5 +122,38 @@ public class TenantService {
 
         // Search tenants by name, email, or phone
         return userRepository.findTenantsBySearchText(searchText.trim());
+    }
+
+    public List<TenantConnectionDto> getManagerTenantConnections(User manager, String searchText) {
+        if (manager.getRole() != UserRole.PROPERTY_MANAGER) {
+            throw new IllegalArgumentException("Only managers can view their tenant connections");
+        }
+
+        List<TenantPropertyConnection> connections;
+        if (searchText == null || searchText.trim().isEmpty()) {
+            connections = connectionRepository.findByManagerAndIsActive(manager, true);
+        } else {
+            connections = connectionRepository.findByManagerAndSearchText(manager, searchText.trim());
+        }
+
+        return connections.stream()
+                .map(connection -> {
+                    TenantConnectionDto dto = new TenantConnectionDto(connection);
+                    
+                    // Find apartment and property IDs based on tenant email and property name
+                    if (connection.getTenant() != null) {
+                        List<Apartment> apartments = apartmentRepository.findByTenantEmail(connection.getTenant().getEmail());
+                        for (Apartment apartment : apartments) {
+                            if (apartment.getProperty().getName().equals(connection.getPropertyName())) {
+                                dto.setApartmentId(apartment.getId());
+                                dto.setPropertyId(apartment.getProperty().getId());
+                                break;
+                            }
+                        }
+                    }
+                    
+                    return dto;
+                })
+                .toList();
     }
 }

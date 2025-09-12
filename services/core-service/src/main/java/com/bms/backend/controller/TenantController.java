@@ -2,6 +2,7 @@ package com.bms.backend.controller;
 
 import com.bms.backend.dto.request.ConnectTenantRequest;
 import com.bms.backend.dto.response.ApiResponse;
+import com.bms.backend.dto.response.TenantConnectionDto;
 import com.bms.backend.dto.response.UserDto;
 import com.bms.backend.entity.TenantPropertyConnection;
 import com.bms.backend.entity.User;
@@ -104,6 +105,26 @@ public class TenantController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("Failed to search tenants globally"));
+        }
+    }
+
+    @GetMapping("/connections")
+    public ResponseEntity<ApiResponse<List<TenantConnectionDto>>> getManagerTenantConnections(
+            @RequestParam(required = false) String searchText) {
+
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User manager = (User) authentication.getPrincipal();
+
+            List<TenantConnectionDto> connections = tenantService.getManagerTenantConnections(manager, searchText);
+            return ResponseEntity.ok(ApiResponse.success(connections, "Tenant connections retrieved successfully"));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to retrieve tenant connections"));
         }
     }
 
