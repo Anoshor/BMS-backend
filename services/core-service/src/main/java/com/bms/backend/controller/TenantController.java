@@ -3,6 +3,7 @@ package com.bms.backend.controller;
 import com.bms.backend.dto.request.ConnectTenantRequest;
 import com.bms.backend.dto.response.ApiResponse;
 import com.bms.backend.dto.response.TenantConnectionDto;
+import com.bms.backend.dto.response.TenantPropertyDto;
 import com.bms.backend.dto.response.UserDto;
 import com.bms.backend.entity.TenantPropertyConnection;
 import com.bms.backend.entity.User;
@@ -129,13 +130,13 @@ public class TenantController {
     }
 
     @GetMapping("/my-properties")
-    public ResponseEntity<ApiResponse<List<TenantPropertyConnection>>> getTenantProperties() {
+    public ResponseEntity<ApiResponse<List<TenantPropertyDto>>> getTenantProperties() {
 
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User tenant = (User) authentication.getPrincipal();
 
-            List<TenantPropertyConnection> properties = tenantService.getTenantProperties(tenant);
+            List<TenantPropertyDto> properties = tenantService.getTenantPropertiesEnhanced(tenant);
             return ResponseEntity.ok(ApiResponse.success(properties, "Properties retrieved successfully"));
 
         } catch (IllegalArgumentException e) {
