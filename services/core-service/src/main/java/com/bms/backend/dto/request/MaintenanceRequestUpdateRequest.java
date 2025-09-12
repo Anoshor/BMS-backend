@@ -1,19 +1,14 @@
 package com.bms.backend.dto.request;
 
 import com.bms.backend.entity.MaintenanceRequest;
-
-import java.time.Instant;
-import java.util.UUID;
+import jakarta.validation.constraints.NotNull;
 
 public class MaintenanceRequestUpdateRequest {
     
+    @NotNull(message = "Status is required")
     private MaintenanceRequest.Status status;
     
-    private UUID assignedTo;
-    
-    private Instant scheduledAt;
-    
-    private MaintenanceRequest.Priority priority;
+    private String description;
 
     // Default constructor
     public MaintenanceRequestUpdateRequest() {}
@@ -27,27 +22,11 @@ public class MaintenanceRequestUpdateRequest {
         this.status = status;
     }
 
-    public UUID getAssignedTo() {
-        return assignedTo;
+    public String getDescription() {
+        return description;
     }
 
-    public void setAssignedTo(UUID assignedTo) {
-        this.assignedTo = assignedTo;
-    }
-
-    public Instant getScheduledAt() {
-        return scheduledAt;
-    }
-
-    public void setScheduledAt(Instant scheduledAt) {
-        this.scheduledAt = scheduledAt;
-    }
-
-    public MaintenanceRequest.Priority getPriority() {
-        return priority;
-    }
-
-    public void setPriority(MaintenanceRequest.Priority priority) {
-        this.priority = priority;
+    public void setDescription(String description) {
+        this.description = description;
     }
 }

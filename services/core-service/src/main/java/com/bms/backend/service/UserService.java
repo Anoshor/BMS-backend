@@ -3,6 +3,7 @@ package com.bms.backend.service;
 import com.bms.backend.dto.request.ManagerRegistrationRequest;
 import com.bms.backend.dto.request.TenantRegistrationRequest;
 import com.bms.backend.dto.request.SignupRequest;
+import com.bms.backend.dto.request.UpdateContactInfoRequest;
 import com.bms.backend.dto.response.UserDto;
 import com.bms.backend.entity.ManagerProfile;
 import com.bms.backend.entity.TenantProfile;
@@ -51,7 +52,7 @@ public class UserService {
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setDateOfBirth(request.getDob().toLocalDate());
-        user.setGender(request.getGender());
+        user.setGender(normalizeString(request.getGender()));
         user.setAccountStatus(AccountStatus.PENDING);
         user.setEmailVerified(false);
         user.setPhoneVerified(false);
@@ -87,7 +88,7 @@ public class UserService {
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setDateOfBirth(request.getDob());
-        user.setGender(request.getGender());
+        user.setGender(normalizeString(request.getGender()));
         user.setAccountStatus(AccountStatus.PENDING);
         user.setEmailVerified(false);
         user.setPhoneVerified(false);
@@ -116,7 +117,7 @@ public class UserService {
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setDateOfBirth(request.getDob());
-        user.setGender(request.getGender());
+        user.setGender(normalizeString(request.getGender()));
         user.setAccountStatus(AccountStatus.PENDING);
         user.setEmailVerified(false);
         user.setPhoneVerified(false);
@@ -322,5 +323,52 @@ public class UserService {
         }
         
         return user;
+    }
+    
+    public User updateContactInfo(User user, UpdateContactInfoRequest request) {
+        // Validate email uniqueness if changed
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new IllegalArgumentException("Email already exists");
+            }
+            user.setEmail(request.getEmail());
+            user.setEmailVerified(false); // Require re-verification
+        }
+        
+        // Validate phone uniqueness if changed  
+        if (request.getPhone() != null && !request.getPhone().equals(user.getPhone())) {
+            if (userRepository.existsByPhone(request.getPhone())) {
+                throw new IllegalArgumentException("Phone number already exists");
+            }
+            user.setPhone(request.getPhone());
+            user.setPhoneVerified(false); // Require re-verification
+        }
+        
+        // Update other fields
+        if (request.getFirstName() != null) {
+            user.setFirstName(request.getFirstName());
+        }
+        
+        if (request.getLastName() != null) {
+            user.setLastName(request.getLastName());
+        }
+        
+        if (request.getProfileImageUrl() != null) {
+            user.setProfileImageUrl(request.getProfileImageUrl());
+        }
+        
+        user.setUpdatedAt(Instant.now());
+        return userRepository.save(user);
+    }
+    
+    /**
+     * Normalizes string values to lowercase for consistency
+     * Handles null and empty strings gracefully
+     */
+    private String normalizeString(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return value;
+        }
+        return value.trim().toLowerCase();
     }
 }

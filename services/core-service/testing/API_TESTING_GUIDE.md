@@ -111,25 +111,38 @@ curl -X POST "http://localhost:8080/api/v1/auth/login" \
 
 ## Step 3: Manager-Tenant Connection
 
-### 3.1 Connect Tenant to Property (Manager Action)
+### 3.1 Connect Tenant to Apartment (Manager Action)
+**⚠️ UPDATED: Now requires apartmentId instead of propertyName**
 ```bash
 curl -X POST "http://localhost:8080/api/v1/tenants/connect" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer MANAGER_ACCESS_TOKEN" \
   -d '{
     "tenantEmail": "tenant@example.com",
-    "propertyName": "Sunset Apartments",
+    "apartmentId": "550e8400-e29b-41d4-a716-446655440000",
     "startDate": "2025-01-01",
     "endDate": "2025-12-31",
     "monthlyRent": 1500.00,
     "securityDeposit": 3000.00,
-    "notes": "Standard lease agreement for 2BHK unit A101"
+    "notes": "Standard lease agreement for unit A101"
   }'
 ```
 
-### 3.2 Search Tenants (Manager)
+**🏗️ Complete Flow:**
+1. Create Property Building (`POST /properties/buildings`)
+2. Create Apartment in Building (`POST /apartments`) 
+3. Get Apartment ID from response
+4. Connect Tenant to Specific Apartment (above)
+
+### 3.2 Search Connected Tenants (Manager)
 ```bash
 curl -X GET "http://localhost:8080/api/v1/tenants/search?searchText=Jane" \
+  -H "Authorization: Bearer MANAGER_ACCESS_TOKEN"
+```
+
+### 3.3 Global Tenant Search (Manager)
+```bash
+curl -X GET "http://localhost:8080/api/v1/tenants/search/global?searchText=Jane" \
   -H "Authorization: Bearer MANAGER_ACCESS_TOKEN"
 ```
 
@@ -150,7 +163,23 @@ curl -X POST "http://localhost:8080/api/v1/auth/refresh-token" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
-### 5.2 Logout
+### 5.2 Update Contact Information
+```bash
+curl -X PUT "http://localhost:8080/api/v1/auth/update-contact" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "firstName": "John Updated",
+    "lastName": "Doe Updated",
+    "email": "new.email@example.com",
+    "phone": "9876543210",
+    "profileImageUrl": "https://example.com/profile.jpg"
+  }'
+```
+
+**⚠️ Security Note:** Email/phone changes require re-verification and may affect account access.
+
+### 5.3 Logout
 ```bash
 curl -X POST "http://localhost:8080/api/v1/auth/logout" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
@@ -182,7 +211,7 @@ All successful API responses follow this format:
 ```json
 {
   "success": true,
-  "data": { /* response data */ },
+  "data": {},
   "message": "Operation successful",
   "timestamp": "2025-08-21T11:45:00"
 }
@@ -197,6 +226,22 @@ Error responses:
   "timestamp": "2025-08-21T11:45:00"
 }
 ```
+
+## ✅ Security Fixes Applied
+
+### 🔐 **Critical Security Issue Fixed**
+- **Issue**: Tenant search APIs were returning sensitive fields including `passwordHash`, `passwordResetToken`, `passwordResetExpires`
+- **Fix**: Updated `/api/v1/tenants/search/global` to return `UserDto` objects that exclude all sensitive fields
+- **Impact**: No more password hash exposure in API responses
+
+### 📝 **New API Added**
+- **Endpoint**: `PUT /api/v1/auth/update-contact` 
+- **Purpose**: Secure contact information updates
+- **Features**: Email/phone uniqueness validation, re-verification requirements
+
+### 🔧 **Tenant Connect API Fixed**  
+- **Issue**: `@Future` validation prevented connecting tenants with current/past start dates
+- **Fix**: Removed `@Future` from `startDate`, added proper date validation in service layer
 
 ## New Enhanced APIs (Property/Apartment Separation & Maintenance Management)
 
@@ -589,7 +634,7 @@ curl --location 'http://localhost:8080/api/v1/tenant/dashboard/maintenance/my-re
 ```
 
 ### Get My Maintenance Requests by Status
-```bash
+```bash0
 curl --location 'http://localhost:8080/api/v1/tenant/dashboard/maintenance/my-requests/status/OPEN' \
 --header 'Authorization: Bearer YOUR_TENANT_TOKEN' \
 --header 'Content-Type: application/json'

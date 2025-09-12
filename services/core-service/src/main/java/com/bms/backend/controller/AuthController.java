@@ -3,6 +3,7 @@ package com.bms.backend.controller;
 import com.bms.backend.dto.request.LoginRequest;
 import com.bms.backend.dto.request.RefreshTokenRequest;
 import com.bms.backend.dto.request.SignupRequest;
+import com.bms.backend.dto.request.UpdateContactInfoRequest;
 import com.bms.backend.dto.response.ApiResponse;
 import com.bms.backend.dto.response.AuthResponse;
 import com.bms.backend.dto.response.UserDto;
@@ -169,13 +170,14 @@ public class AuthController {
                         .body(ApiResponse.error("Account is not active"));
             }
             
-            // Generate new access token
+            // Generate new access token AND new refresh token (rotation)
             String newAccessToken = jwtService.generateAccessToken(user);
+            String newRefreshToken = jwtService.generateRefreshToken(user, request.getDeviceId(), DeviceType.fromCode(request.getDeviceType()));
             
-            // Create response (only return new access token, keep same refresh token)
+            // Create response with both new tokens
             AuthResponse authResponse = AuthResponse.builder()
                     .accessToken(newAccessToken)
-                    .refreshToken(refreshToken)
+                    .refreshToken(newRefreshToken)
                     .requiresVerification(false)
                     .requiresDocuments(false)
                     .expiresIn(jwtService.getAccessTokenExpiration())
@@ -280,6 +282,25 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("Failed to retrieve profile"));
+        }
+    }
+    
+    @PutMapping("/update-contact")
+    public ResponseEntity<ApiResponse<UserDto>> updateContactInfo(
+            @RequestBody @Valid UpdateContactInfoRequest request,
+            @AuthenticationPrincipal User currentUser) {
+        
+        try {
+            User updatedUser = userService.updateContactInfo(currentUser, request);
+            UserDto userDto = UserDto.from(updatedUser);
+            return ResponseEntity.ok(ApiResponse.success(userDto, "Contact information updated successfully"));
+            
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to update contact information"));
         }
     }
     

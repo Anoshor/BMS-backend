@@ -118,33 +118,31 @@ public class MaintenanceRequestService {
 
         MaintenanceRequest maintenanceRequest = existingRequest.get();
 
-        // Check authorization (manager of the property or assigned user)
-        boolean isAuthorized = maintenanceRequest.getApartment().getProperty().getManager().getId().equals(updater.getId()) ||
-                              (maintenanceRequest.getAssignedTo() != null && maintenanceRequest.getAssignedTo().getId().equals(updater.getId()));
+        // Check authorization (only manager can update status)
+        boolean isAuthorized = maintenanceRequest.getApartment().getProperty().getManager().getId().equals(updater.getId());
 
         if (!isAuthorized) {
             throw new RuntimeException("Not authorized to update this maintenance request");
         }
 
-        if (request.getStatus() != null) {
-            maintenanceRequest.setStatus(request.getStatus());
-        }
-        if (request.getAssignedTo() != null) {
-            Optional<User> assignee = userRepository.findById(request.getAssignedTo());
-            if (assignee.isPresent()) {
-                maintenanceRequest.setAssignedTo(assignee.get());
-            }
-        }
-        if (request.getScheduledAt() != null) {
-            maintenanceRequest.setScheduledAt(request.getScheduledAt());
-        }
-        if (request.getPriority() != null) {
-            maintenanceRequest.setPriority(request.getPriority());
-        }
-
+        // Update status
+        maintenanceRequest.setStatus(request.getStatus());
         maintenanceRequest.setUpdatedAt(Instant.now());
+        
+        MaintenanceRequest updatedRequest = maintenanceRequestRepository.save(maintenanceRequest);
+        
+        // Add description as maintenance update if provided
+        if (request.getDescription() != null && !request.getDescription().trim().isEmpty()) {
+            MaintenanceUpdate update = new MaintenanceUpdate();
+            update.setMaintenanceRequest(updatedRequest);
+            update.setMessage(request.getDescription());
+            update.setUpdateType(MaintenanceUpdate.UpdateType.STATUS_CHANGE);
+            update.setUpdatedBy(updater);
+            update.setCreatedAt(Instant.now());
+            maintenanceUpdateRepository.save(update);
+        }
 
-        return maintenanceRequestRepository.save(maintenanceRequest);
+        return updatedRequest;
     }
 
     public MaintenanceUpdate addUpdateToMaintenanceRequest(UUID maintenanceRequestId, MaintenanceUpdateRequest request, User updater) {

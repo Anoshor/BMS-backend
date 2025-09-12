@@ -1,10 +1,12 @@
 package com.bms.backend.service;
 
 import com.bms.backend.dto.request.ConnectTenantRequest;
-import com.bms.backend.entity.Property;
+import com.bms.backend.entity.Apartment;
+import com.bms.backend.entity.PropertyBuilding;
 import com.bms.backend.entity.TenantPropertyConnection;
 import com.bms.backend.entity.User;
 import com.bms.backend.enums.UserRole;
+import com.bms.backend.repository.ApartmentRepository;
 import com.bms.backend.repository.PropertyRepository;
 import com.bms.backend.repository.TenantPropertyConnectionRepository;
 import com.bms.backend.repository.UserRepository;
@@ -26,11 +28,19 @@ public class TenantService {
 
     @Autowired
     private PropertyRepository propertyRepository;
+    
+    @Autowired
+    private ApartmentRepository apartmentRepository;
 
     public TenantPropertyConnection connectTenantToProperty(User manager, ConnectTenantRequest request) {
         // Validate manager
         if (manager.getRole() != UserRole.PROPERTY_MANAGER) {
             throw new IllegalArgumentException("Only managers can connect tenants to properties");
+        }
+        
+        // Validate dates
+        if (request.getEndDate().isBefore(request.getStartDate())) {
+            throw new IllegalArgumentException("End date must be after start date");
         }
 
         // Find tenant by email
@@ -41,22 +51,40 @@ public class TenantService {
             throw new IllegalArgumentException("User is not a tenant");
         }
 
-        // Check if tenant is already connected to this property
-        if (connectionRepository.existsByTenantAndPropertyNameAndIsActive(tenant, request.getPropertyName(), true)) {
+        // Find and validate apartment
+        Apartment apartment = apartmentRepository.findById(request.getApartmentId())
+                .orElseThrow(() -> new IllegalArgumentException("Apartment not found with ID: " + request.getApartmentId()));
+
+        // Verify apartment belongs to this manager
+        if (!apartment.getProperty().getManager().getId().equals(manager.getId())) {
+            throw new IllegalArgumentException("You don't have permission to manage this apartment");
+        }
+
+        // Check if apartment is already occupied
+        if ("OCCUPIED".equalsIgnoreCase(apartment.getOccupancyStatus())) {
+            throw new IllegalArgumentException("Apartment is already occupied");
+        }
+
+        // Check if tenant is already connected to this apartment
+        String propertyName = apartment.getProperty().getName();
+        if (connectionRepository.existsByTenantAndPropertyNameAndIsActive(tenant, propertyName, true)) {
             throw new IllegalArgumentException("Tenant is already connected to this property");
         }
 
-        // Check if property exists for this manager
-        Property property = propertyRepository.findByPropertyNameAndManager(request.getPropertyName(), manager)
-                .orElseThrow(() -> new IllegalArgumentException("Property not found: " + request.getPropertyName()));
-
         // Create connection
         TenantPropertyConnection connection = new TenantPropertyConnection(
-                tenant, manager, request.getPropertyName(),
+                tenant, manager, propertyName,
                 request.getStartDate(), request.getEndDate(), request.getMonthlyRent()
         );
         connection.setSecurityDeposit(request.getSecurityDeposit());
         connection.setNotes(request.getNotes());
+
+        // Update apartment occupancy and tenant info
+        apartment.setOccupancyStatus("OCCUPIED");
+        apartment.setTenantName(tenant.getFirstName() + " " + tenant.getLastName());
+        apartment.setTenantEmail(tenant.getEmail());
+        apartment.setTenantPhone(tenant.getPhone());
+        apartmentRepository.save(apartment);
 
         return connectionRepository.save(connection);
     }
@@ -79,5 +107,19 @@ public class TenantService {
         }
 
         return connectionRepository.findByTenantAndIsActive(tenant, true);
+    }
+
+    public List<User> searchTenantsGlobal(User manager, String searchText) {
+        if (manager.getRole() != UserRole.PROPERTY_MANAGER) {
+            throw new IllegalArgumentException("Only managers can search tenants globally");
+        }
+
+        if (searchText == null || searchText.trim().isEmpty()) {
+            // Return all active tenants
+            return userRepository.findByRoleAndAccountStatus(UserRole.TENANT, com.bms.backend.enums.AccountStatus.ACTIVE);
+        }
+
+        // Search tenants by name, email, or phone
+        return userRepository.findTenantsBySearchText(searchText.trim());
     }
 }

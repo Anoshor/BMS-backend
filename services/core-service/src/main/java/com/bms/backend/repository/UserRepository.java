@@ -56,4 +56,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     
     @Query("SELECT u FROM User u WHERE u.lastLogin IS NULL AND u.createdAt < :cutoffDate")
     List<User> findNeverLoggedInUsersOlderThan(@Param("cutoffDate") Instant cutoffDate);
+    
+    @Query("SELECT u FROM User u WHERE u.role = 'TENANT' AND u.accountStatus = 'ACTIVE' AND " +
+           "(LOWER(u.firstName) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
+           "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
+           "LOWER(u.email) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
+           "u.phone LIKE CONCAT('%', :searchText, '%'))")
+    List<User> findTenantsBySearchText(@Param("searchText") String searchText);
 }

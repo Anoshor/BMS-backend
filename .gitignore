@@ -39,3 +39,49 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+
+# Database files (H2)
+data/
+*.db
+*.h2.db
+*.mv.db
+*.trace.db
+
+# Environment-specific configuration
+application-local.properties
+application-prod.properties
+application-staging.properties
+application-dev.properties
+.env
+.env.local
+.env.production
+.env.staging
+
+# Security & Secrets
+*.key
+*.pem
+*.p12
+*.jks
+secrets/
+config/secrets/
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# Node modules (if any frontend)
+node_modules/
+
+# Test results
+test-results/
+coverage/
+
+# Backup files
+*.backup
+*.bak
+
+# Runtime
+*.pid
+
+# Generated documentation
+docs/generated/

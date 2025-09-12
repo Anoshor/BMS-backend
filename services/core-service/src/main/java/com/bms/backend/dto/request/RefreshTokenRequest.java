@@ -6,6 +6,10 @@ public class RefreshTokenRequest {
     
     @NotBlank(message = "Refresh token is required")
     private String refreshToken;
+    
+    private String deviceId;
+    
+    private String deviceType = "web";
 
     // Default constructor
     public RefreshTokenRequest() {}
@@ -22,5 +26,21 @@ public class RefreshTokenRequest {
 
     public void setRefreshToken(String refreshToken) {
         this.refreshToken = refreshToken;
+    }
+    
+    public String getDeviceId() {
+        return deviceId;
+    }
+    
+    public void setDeviceId(String deviceId) {
+        this.deviceId = deviceId;
+    }
+    
+    public String getDeviceType() {
+        return deviceType;
+    }
+    
+    public void setDeviceType(String deviceType) {
+        this.deviceType = deviceType;
     }
 }

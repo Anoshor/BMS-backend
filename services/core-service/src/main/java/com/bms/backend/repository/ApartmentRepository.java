@@ -20,7 +20,7 @@ public interface ApartmentRepository extends JpaRepository<Apartment, UUID> {
     @Query("SELECT a FROM Apartment a WHERE a.property.manager = :manager")
     List<Apartment> findByManager(@Param("manager") User manager);
     
-    @Query("SELECT a FROM Apartment a WHERE a.property.manager = :manager AND a.occupancyStatus = :status")
+    @Query("SELECT a FROM Apartment a WHERE a.property.manager = :manager AND LOWER(a.occupancyStatus) = LOWER(:status)")
     List<Apartment> findByManagerAndOccupancyStatus(@Param("manager") User manager, 
                                                    @Param("status") String status);
     
@@ -44,10 +44,10 @@ public interface ApartmentRepository extends JpaRepository<Apartment, UUID> {
     
     Optional<Apartment> findByPropertyAndUnitNumber(PropertyBuilding property, String unitNumber);
     
-    @Query("SELECT COUNT(a) FROM Apartment a WHERE a.property.manager = :manager AND a.occupancyStatus = 'vacant'")
+    @Query("SELECT COUNT(a) FROM Apartment a WHERE a.property.manager = :manager AND LOWER(a.occupancyStatus) = 'vacant'")
     Long countVacantByManager(@Param("manager") User manager);
     
-    @Query("SELECT COUNT(a) FROM Apartment a WHERE a.property.manager = :manager AND a.occupancyStatus = 'occupied'")
+    @Query("SELECT COUNT(a) FROM Apartment a WHERE a.property.manager = :manager AND LOWER(a.occupancyStatus) = 'occupied'")
     Long countOccupiedByManager(@Param("manager") User manager);
     
     // Additional methods needed by ApartmentService
@@ -55,11 +55,11 @@ public interface ApartmentRepository extends JpaRepository<Apartment, UUID> {
     List<Apartment> findByPropertyManager(@Param("manager") User manager);
     
     @Query("SELECT a FROM Apartment a WHERE a.property.manager = :manager " +
-           "AND a.occupancyStatus = 'OCCUPIED'")
+           "AND LOWER(a.occupancyStatus) = 'occupied'")
     List<Apartment> findOccupiedByManager(@Param("manager") User manager);
     
     @Query("SELECT a FROM Apartment a WHERE a.property.manager = :manager " +
-           "AND a.occupancyStatus = 'VACANT'")
+           "AND LOWER(a.occupancyStatus) = 'vacant'")
     List<Apartment> findUnoccupiedByManager(@Param("manager") User manager);
     
     List<Apartment> findByTenantPhone(String tenantPhone);
