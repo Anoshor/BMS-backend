@@ -97,7 +97,7 @@ docker-compose logs -f bms-core
 ```
 
 ### Access H2 Console (if enabled)
-- URL: http://localhost:8082/h2-console
+- URL: http://localhost:8082/api/v1/h2-console
 - JDBC URL: `jdbc:h2:file:/app/data/bmsdb`
 - Username: `sa`
 - Password: (empty)

@@ -1,0 +1,603 @@
+{
+  "info": {
+    "name": "BMS API Test Collection",
+    "description": "Comprehensive test collection for BMS Backend APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Set base URL if not set",
+          "if (!pm.environment.get('base_url')) {",
+          "    pm.environment.set('base_url', 'http://localhost:8080');",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "api_base",
+      "value": "{{base_url}}/api/v1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Manager Registration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has success field', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('success');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{manager_email}}\",\n  \"contactNum\": \"9876543210\",\n  \"password\": \"TestPass123!\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"Manager\",\n  \"dob\": \"1990-01-15T00:00:00.000Z\",\n  \"gender\": \"male\",\n  \"role\": \"MANAGER\"\n}"
+            },
+            "url": {
+              "raw": "{{api_base}}/auth/signup",
+              "host": ["{{api_base}}"],
+              "path": ["auth", "signup"]
+            }
+          }
+        },
+        {
+          "name": "Manager Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains access token', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('accessToken');",
+                  "    ",
+                  "    // Store token for subsequent requests",
+                  "    pm.environment.set('manager_access_token', jsonData.data.accessToken);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"{{manager_email}}\",\n  \"password\": \"TestPass123!\",\n  \"role\": \"MANAGER\"\n}"
+            },
+            "url": {
+              "raw": "{{api_base}}/auth/login",
+              "host": ["{{api_base}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Tenant Registration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{tenant_email}}\",\n  \"contactNum\": \"9876543211\",\n  \"password\": \"TestPass123!\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"Tenant\",\n  \"dob\": \"1995-06-08T00:00:00.000Z\",\n  \"gender\": \"female\",\n  \"role\": \"TENANT\"\n}"
+            },
+            "url": {
+              "raw": "{{api_base}}/auth/signup",
+              "host": ["{{api_base}}"],
+              "path": ["auth", "signup"]
+            }
+          }
+        },
+        {
+          "name": "Tenant Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains access token', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('accessToken');",
+                  "    ",
+                  "    // Store token for subsequent requests",
+                  "    pm.environment.set('tenant_access_token', jsonData.data.accessToken);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"{{tenant_email}}\",\n  \"password\": \"TestPass123!\",\n  \"role\": \"TENANT\"\n}"
+            },
+            "url": {
+              "raw": "{{api_base}}/auth/login",
+              "host": ["{{api_base}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Property Management",
+      "item": [
+        {
+          "name": "Create Property Building",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Property created successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.have.property('id');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{manager_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{property_name}}\",\n  \"address\": \"123 Test Street, Test City\",\n  \"propertyType\": \"Apartment Complex\",\n  \"residentialType\": \"residential\",\n  \"totalUnits\": 50,\n  \"totalFloors\": 5,\n  \"yearBuilt\": 2020,\n  \"amenities\": \"Pool, Gym, Parking\"\n}"
+            },
+            "url": {
+              "raw": "{{api_base}}/properties/buildings",
+              "host": ["{{api_base}}"],
+              "path": ["properties", "buildings"]
+            }
+          }
+        },
+        {
+          "name": "Get My Properties",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains properties array', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{manager_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{api_base}}/properties/buildings",
+              "host": ["{{api_base}}"],
+              "path": ["properties", "buildings"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tenant Management",
+      "item": [
+        {
+          "name": "Connect Tenant to Property",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Tenant connected successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.message).to.include('successfully');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{manager_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantEmail\": \"{{tenant_email}}\",\n  \"propertyName\": \"{{property_name}}\",\n  \"startDate\": \"2025-01-01\",\n  \"endDate\": \"2025-12-31\",\n  \"monthlyRent\": 1500.00,\n  \"securityDeposit\": 3000.00,\n  \"notes\": \"Test lease agreement\"\n}"
+            },
+            "url": {
+              "raw": "{{api_base}}/tenants/connect",
+              "host": ["{{api_base}}"],
+              "path": ["tenants", "connect"]
+            }
+          }
+        },
+        {
+          "name": "Search Connected Tenants",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains tenant connections', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{manager_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{api_base}}/tenants/search?searchText=Test",
+              "host": ["{{api_base}}"],
+              "path": ["tenants", "search"],
+              "query": [
+                {
+                  "key": "searchText",
+                  "value": "Test"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Global Tenant Search",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains tenant data without sensitive fields', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "    ",
+                  "    // Verify no sensitive fields are exposed",
+                  "    if (jsonData.data.length > 0) {",
+                  "        var tenant = jsonData.data[0];",
+                  "        pm.expect(tenant).to.not.have.property('passwordHash');",
+                  "        pm.expect(tenant).to.not.have.property('passwordResetToken');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{manager_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{api_base}}/tenants/search/global?searchText=Test",
+              "host": ["{{api_base}}"],
+              "path": ["tenants", "search", "global"],
+              "query": [
+                {
+                  "key": "searchText",
+                  "value": "Test"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Security Tests",
+      "item": [
+        {
+          "name": "Unauthorized Access Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Response indicates unauthorized', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{api_base}}/properties/buildings",
+              "host": ["{{api_base}}"],
+              "path": ["properties", "buildings"]
+            }
+          }
+        },
+        {
+          "name": "Update Contact Info",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Contact info updated successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{manager_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Updated\",\n  \"lastName\": \"Manager\"\n}"
+            },
+            "url": {
+              "raw": "{{api_base}}/auth/update-contact",
+              "host": ["{{api_base}}"],
+              "path": ["auth", "update-contact"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Validation Tests",
+      "item": [
+        {
+          "name": "Invalid Email Format Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Response indicates validation error', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData.message).to.include('email');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{manager_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantEmail\": \"invalid-email\",\n  \"propertyName\": \"{{property_name}}\",\n  \"startDate\": \"2025-01-01\",\n  \"endDate\": \"2025-12-31\",\n  \"monthlyRent\": 1500.00,\n  \"securityDeposit\": 3000.00\n}"
+            },
+            "url": {
+              "raw": "{{api_base}}/tenants/connect",
+              "host": ["{{api_base}}"],
+              "path": ["tenants", "connect"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "manager_email",
+      "value": "testmanager@bms.com"
+    },
+    {
+      "key": "tenant_email", 
+      "value": "testtenant@bms.com"
+    },
+    {
+      "key": "property_name",
+      "value": "Test Property Heights"
+    }
+  ]
+}

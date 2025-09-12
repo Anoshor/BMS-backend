@@ -38,12 +38,13 @@ public class ApartmentService {
         apartment.setBedrooms(request.getBedrooms());
         apartment.setBathrooms(request.getBathrooms());
         apartment.setSquareFootage(request.getSquareFootage());
-        apartment.setFurnished(request.getFurnished());
-        apartment.setBalcony(request.getBalcony());
+        // Normalize enum-like fields to uppercase for consistency
+        apartment.setFurnished(normalizeString(request.getFurnished()));
+        apartment.setBalcony(normalizeString(request.getBalcony()));
         apartment.setRent(request.getRent());
         apartment.setSecurityDeposit(request.getSecurityDeposit());
         apartment.setMaintenanceCharges(request.getMaintenanceCharges());
-        apartment.setOccupancyStatus(request.getOccupancyStatus());
+        apartment.setOccupancyStatus(normalizeString(request.getOccupancyStatus()));
         apartment.setUtilityMeterNumbers(request.getUtilityMeterNumbers());
         apartment.setDocuments(request.getDocuments());
         apartment.setTenantName(request.getTenantName());
@@ -113,12 +114,13 @@ public class ApartmentService {
         apartment.setBedrooms(request.getBedrooms());
         apartment.setBathrooms(request.getBathrooms());
         apartment.setSquareFootage(request.getSquareFootage());
-        apartment.setFurnished(request.getFurnished());
-        apartment.setBalcony(request.getBalcony());
+        // Normalize enum-like fields to uppercase for consistency
+        apartment.setFurnished(normalizeString(request.getFurnished()));
+        apartment.setBalcony(normalizeString(request.getBalcony()));
         apartment.setRent(request.getRent());
         apartment.setSecurityDeposit(request.getSecurityDeposit());
         apartment.setMaintenanceCharges(request.getMaintenanceCharges());
-        apartment.setOccupancyStatus(request.getOccupancyStatus());
+        apartment.setOccupancyStatus(normalizeString(request.getOccupancyStatus()));
         apartment.setUtilityMeterNumbers(request.getUtilityMeterNumbers());
         apartment.setDocuments(request.getDocuments());
         apartment.setTenantName(request.getTenantName());
@@ -174,5 +176,16 @@ public class ApartmentService {
         apartment.setUpdatedAt(Instant.now());
 
         return apartmentRepository.save(apartment);
+    }
+    
+    /**
+     * Normalizes string values to uppercase for consistency
+     * Handles null and empty strings gracefully
+     */
+    private String normalizeString(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return value;
+        }
+        return value.trim().toUpperCase();
     }
 }
