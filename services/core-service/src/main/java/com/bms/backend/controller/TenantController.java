@@ -2,6 +2,7 @@ package com.bms.backend.controller;
 
 import com.bms.backend.dto.request.ConnectTenantRequest;
 import com.bms.backend.dto.response.ApiResponse;
+import com.bms.backend.dto.response.LeaseDetailsDto;
 import com.bms.backend.dto.response.TenantConnectionDto;
 import com.bms.backend.dto.response.TenantPropertyDto;
 import com.bms.backend.dto.response.UserDto;
@@ -23,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/tenants")
@@ -145,6 +147,25 @@ public class TenantController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("Failed to retrieve properties"));
+        }
+    }
+
+    @GetMapping("/lease/{connectionId}")
+    public ResponseEntity<ApiResponse<LeaseDetailsDto>> getLeaseDetails(@PathVariable UUID connectionId) {
+
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+
+            LeaseDetailsDto leaseDetails = tenantService.getLeaseDetails(user, connectionId);
+            return ResponseEntity.ok(ApiResponse.success(leaseDetails, "Lease details retrieved successfully"));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to retrieve lease details"));
         }
     }
 }

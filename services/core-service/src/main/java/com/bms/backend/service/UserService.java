@@ -357,6 +357,16 @@ public class UserService {
             user.setProfileImageUrl(request.getProfileImageUrl());
         }
         
+        // Update date of birth
+        if (request.getDateOfBirth() != null) {
+            user.setDateOfBirth(request.getDateOfBirth());
+        }
+        
+        // Update gender
+        if (request.getGender() != null) {
+            user.setGender(normalizeString(request.getGender()));
+        }
+        
         user.setUpdatedAt(Instant.now());
         return userRepository.save(user);
     }
