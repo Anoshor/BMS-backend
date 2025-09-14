@@ -42,6 +42,9 @@ public class TenantPropertyConnection {
     @Column(name = "security_deposit")
     private Double securityDeposit;
 
+    @Column(name = "payment_frequency")
+    private String paymentFrequency;
+
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
@@ -132,6 +135,14 @@ public class TenantPropertyConnection {
 
     public void setSecurityDeposit(Double securityDeposit) {
         this.securityDeposit = securityDeposit;
+    }
+
+    public String getPaymentFrequency() {
+        return paymentFrequency;
+    }
+
+    public void setPaymentFrequency(String paymentFrequency) {
+        this.paymentFrequency = paymentFrequency;
     }
 
     public String getNotes() {

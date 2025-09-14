@@ -1,17 +1,16 @@
 package com.bms.backend.service;
 
 import com.bms.backend.dto.request.ConnectTenantRequest;
+import com.bms.backend.dto.response.LeaseDetailsDto;
 import com.bms.backend.dto.response.TenantConnectionDto;
 import com.bms.backend.dto.response.TenantPropertyDto;
-import com.bms.backend.entity.Apartment;
-import com.bms.backend.entity.PropertyBuilding;
-import com.bms.backend.entity.TenantPropertyConnection;
-import com.bms.backend.entity.User;
+import com.bms.backend.entity.*;
 import com.bms.backend.enums.UserRole;
-import com.bms.backend.repository.ApartmentRepository;
-import com.bms.backend.repository.PropertyRepository;
-import com.bms.backend.repository.TenantPropertyConnectionRepository;
-import com.bms.backend.repository.UserRepository;
+import com.bms.backend.repository.*;
+
+import java.time.Period;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +32,9 @@ public class TenantService {
     
     @Autowired
     private ApartmentRepository apartmentRepository;
+    
+    @Autowired
+    private MaintenanceRequestRepository maintenanceRequestRepository;
 
     public TenantPropertyConnection connectTenantToProperty(User manager, ConnectTenantRequest request) {
         // Validate manager
@@ -79,6 +81,7 @@ public class TenantService {
                 request.getStartDate(), request.getEndDate(), request.getMonthlyRent()
         );
         connection.setSecurityDeposit(request.getSecurityDeposit());
+        connection.setPaymentFrequency(request.getPaymentFrequency());
         connection.setNotes(request.getNotes());
 
         // Update apartment occupancy and tenant info
@@ -185,5 +188,146 @@ public class TenantService {
                     return dto;
                 })
                 .toList();
+    }
+
+    public LeaseDetailsDto getLeaseDetails(User user, UUID connectionId) {
+        // Find the tenant property connection
+        TenantPropertyConnection connection = connectionRepository.findById(connectionId)
+                .orElseThrow(() -> new IllegalArgumentException("Lease connection not found"));
+        
+        // Validate access - either tenant or manager can view
+        if (user.getRole() == UserRole.TENANT) {
+            if (!connection.getTenant().getId().equals(user.getId())) {
+                throw new IllegalArgumentException("You don't have permission to view this lease");
+            }
+        } else if (user.getRole() == UserRole.PROPERTY_MANAGER) {
+            if (!connection.getManager().getId().equals(user.getId())) {
+                throw new IllegalArgumentException("You don't have permission to view this lease");
+            }
+        } else {
+            throw new IllegalArgumentException("Only tenants and managers can view lease details");
+        }
+        
+        // Find the apartment for this connection
+        List<Apartment> apartments = apartmentRepository.findByTenantEmail(connection.getTenant().getEmail());
+        Apartment apartment = null;
+        for (Apartment apt : apartments) {
+            if (apt.getProperty().getName().equals(connection.getPropertyName())) {
+                apartment = apt;
+                break;
+            }
+        }
+        
+        if (apartment == null) {
+            throw new IllegalArgumentException("Apartment not found for this lease connection");
+        }
+        
+        PropertyBuilding property = apartment.getProperty();
+        User tenant = connection.getTenant();
+        
+        // Build the response DTO
+        LeaseDetailsDto dto = new LeaseDetailsDto();
+        
+        // Connection/Lease Information
+        dto.setConnectionId(connection.getId());
+        dto.setLeaseId(generateLeaseId(connection.getId()));
+        
+        // Property Information
+        dto.setPropertyId(property.getId());
+        dto.setPropertyName(property.getName());
+        dto.setPropertyType(property.getPropertyType());
+        dto.setPropertyAddress(property.getAddress());
+        dto.setRentAmount(connection.getMonthlyRent());
+        
+        // Property Images (sorted by display order)
+        if (property.getImages() != null && !property.getImages().isEmpty()) {
+            List<LeaseDetailsDto.PropertyImageDto> imagesDtos = property.getImages()
+                .stream()
+                .sorted((a, b) -> {
+                    // Primary image first, then by display order
+                    if (Boolean.TRUE.equals(a.getIsPrimary()) && !Boolean.TRUE.equals(b.getIsPrimary())) return -1;
+                    if (!Boolean.TRUE.equals(a.getIsPrimary()) && Boolean.TRUE.equals(b.getIsPrimary())) return 1;
+                    return Integer.compare(a.getDisplayOrder() != null ? a.getDisplayOrder() : 999, 
+                                         b.getDisplayOrder() != null ? b.getDisplayOrder() : 999);
+                })
+                .map(img -> new LeaseDetailsDto.PropertyImageDto(
+                    img.getId(),
+                    img.getImageUrl(),
+                    img.getImageData(),
+                    img.getImageName(),
+                    img.getDescription(),
+                    Boolean.TRUE.equals(img.getIsPrimary()),
+                    img.getDisplayOrder()
+                ))
+                .collect(Collectors.toList());
+            dto.setPropertyImages(imagesDtos);
+        }
+        
+        // Property Features (from apartment)
+        dto.setBedrooms(apartment.getBedrooms());
+        dto.setBathrooms(apartment.getBathrooms());
+        dto.setSquareFootage(apartment.getSquareFootage());
+        
+        // Tenant Information
+        dto.setTenantId(tenant.getId());
+        dto.setTenantName(tenant.getFirstName() + " " + tenant.getLastName());
+        dto.setTenantEmail(tenant.getEmail());
+        dto.setTenantPhone(tenant.getPhone());
+        
+        // Lease Details
+        dto.setLeaseStartDate(connection.getStartDate());
+        dto.setLeaseEndDate(connection.getEndDate());
+        dto.setLeaseDuration(calculateLeaseDuration(connection.getStartDate(), connection.getEndDate()));
+        dto.setPaymentFrequency(connection.getPaymentFrequency());
+
+        // Deposit & Charges
+        dto.setSecurityDeposit(connection.getSecurityDeposit());
+        dto.setMaintenanceCharges(apartment.getMaintenanceCharges());
+        dto.setUtilityMeterNumbers(apartment.getUtilityMeterNumbers());
+        
+        // Unit Details
+        dto.setApartmentId(apartment.getId());
+        dto.setUnitId(apartment.getUnitNumber());
+        dto.setFloor(apartment.getFloor());
+        dto.setOccupancyStatus(apartment.getOccupancyStatus());
+        dto.setFurnished(apartment.getFurnished());
+        
+        // Navigation Actions
+        dto.setHasMaintenanceRequests(hasMaintenanceRequests(apartment.getId(), tenant.getId()));
+        dto.setHasDocuments(hasDocuments(apartment));
+        
+        return dto;
+    }
+    
+    private String generateLeaseId(UUID connectionId) {
+        // Extract some digits from UUID and format as LEASE-YYYY-XXXX
+        String uuidStr = connectionId.toString().replace("-", "");
+        String shortId = uuidStr.substring(uuidStr.length() - 4).toUpperCase();
+        return "LEASE-2025-" + shortId;
+    }
+    
+    private String calculateLeaseDuration(java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        if (startDate == null || endDate == null) {
+            return "Unknown";
+        }
+        
+        Period period = Period.between(startDate, endDate);
+        
+        if (period.getYears() > 0) {
+            return period.getYears() + " Year" + (period.getYears() > 1 ? "s" : "");
+        } else if (period.getMonths() > 0) {
+            return period.getMonths() + " Month" + (period.getMonths() > 1 ? "s" : "");
+        } else {
+            return period.getDays() + " Day" + (period.getDays() > 1 ? "s" : "");
+        }
+    }
+    
+    private boolean hasMaintenanceRequests(UUID apartmentId, UUID tenantId) {
+        return maintenanceRequestRepository.existsByApartmentIdAndTenantId(apartmentId, tenantId);
+    }
+    
+    private boolean hasDocuments(Apartment apartment) {
+        return apartment.getDocuments() != null && !apartment.getDocuments().trim().isEmpty() ||
+               (apartment.getApartmentDocuments() != null && !apartment.getApartmentDocuments().isEmpty());
     }
 }
