@@ -81,6 +81,7 @@ public class TenantService {
                 request.getStartDate(), request.getEndDate(), request.getMonthlyRent()
         );
         connection.setSecurityDeposit(request.getSecurityDeposit());
+        connection.setPaymentFrequency(request.getPaymentFrequency());
         connection.setNotes(request.getNotes());
 
         // Update apartment occupancy and tenant info
@@ -277,7 +278,8 @@ public class TenantService {
         dto.setLeaseStartDate(connection.getStartDate());
         dto.setLeaseEndDate(connection.getEndDate());
         dto.setLeaseDuration(calculateLeaseDuration(connection.getStartDate(), connection.getEndDate()));
-        
+        dto.setPaymentFrequency(connection.getPaymentFrequency());
+
         // Deposit & Charges
         dto.setSecurityDeposit(connection.getSecurityDeposit());
         dto.setMaintenanceCharges(apartment.getMaintenanceCharges());

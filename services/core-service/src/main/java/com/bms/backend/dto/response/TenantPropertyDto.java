@@ -25,6 +25,7 @@ public class TenantPropertyDto {
     
     private Double monthlyRent;
     private Double securityDeposit;
+    private String paymentFrequency;
     private String notes;
     private Boolean isActive;
     
@@ -47,6 +48,7 @@ public class TenantPropertyDto {
         this.endDate = connection.getEndDate();
         this.monthlyRent = connection.getMonthlyRent();
         this.securityDeposit = connection.getSecurityDeposit();
+        this.paymentFrequency = connection.getPaymentFrequency();
         this.notes = connection.getNotes();
         this.isActive = connection.getIsActive();
         this.createdAt = connection.getCreatedAt();
@@ -148,7 +150,15 @@ public class TenantPropertyDto {
     public void setSecurityDeposit(Double securityDeposit) {
         this.securityDeposit = securityDeposit;
     }
-    
+
+    public String getPaymentFrequency() {
+        return paymentFrequency;
+    }
+
+    public void setPaymentFrequency(String paymentFrequency) {
+        this.paymentFrequency = paymentFrequency;
+    }
+
     public String getNotes() {
         return notes;
     }
