@@ -42,7 +42,7 @@ public class MaintenanceRequest {
     @JsonIgnore
     private ServiceCategory serviceCategory;
     
-    @Column(name = "title", nullable = false)
+    @Column(name = "title", nullable = true)
     private String title;
     
     @Column(name = "description", nullable = false, columnDefinition = "TEXT")

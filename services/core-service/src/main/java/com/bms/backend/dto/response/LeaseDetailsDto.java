@@ -40,7 +40,8 @@ public class LeaseDetailsDto {
     private LocalDate leaseEndDate;
     
     private String leaseDuration; // Calculated duration like "1 Year"
-    
+    private String paymentFrequency; // How often rent is paid (e.g., "Monthly", "Every 2 months")
+
     // Deposit & Charges
     private Double securityDeposit;
     private BigDecimal maintenanceCharges;
@@ -251,7 +252,15 @@ public class LeaseDetailsDto {
     public void setLeaseDuration(String leaseDuration) {
         this.leaseDuration = leaseDuration;
     }
-    
+
+    public String getPaymentFrequency() {
+        return paymentFrequency;
+    }
+
+    public void setPaymentFrequency(String paymentFrequency) {
+        this.paymentFrequency = paymentFrequency;
+    }
+
     public Double getSecurityDeposit() {
         return securityDeposit;
     }

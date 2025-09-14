@@ -183,6 +183,44 @@ Images are built for:
 - `linux/amd64` (Intel/AMD processors)
 - `linux/arm64` (Apple Silicon, ARM processors)
 
+### Docker Build & Push Commands
+
+For developers who need to build and push Docker images:
+
+#### Single Platform Build (Local Development)
+```bash
+# Navigate to core-service directory
+cd services/core-service
+
+# Build for current platform
+docker build -t anoshorpaul/bms-core-service:latest .
+
+# Push to Docker Hub
+docker push anoshorpaul/bms-core-service:latest
+```
+
+#### Multi-Platform Build (Production)
+```bash
+# Create/use buildx builder for multi-platform support
+docker buildx create --use --name multiplatform-builder
+
+# Build and push for both AMD64 and ARM64 architectures
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t anoshorpaul/bms-core-service:latest \
+  --push .
+```
+
+#### Verify Multi-Platform Image
+```bash
+# Check supported architectures
+docker manifest inspect anoshorpaul/bms-core-service:latest
+
+# Pull specific architecture (optional)
+docker pull --platform linux/amd64 anoshorpaul/bms-core-service:latest
+docker pull --platform linux/arm64 anoshorpaul/bms-core-service:latest
+```
+
 ### Docker Compose Configuration
 
 ```yaml
