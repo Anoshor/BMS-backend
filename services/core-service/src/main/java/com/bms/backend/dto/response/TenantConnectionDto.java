@@ -23,6 +23,7 @@ public class TenantConnectionDto {
     
     private Double rentAmount;
     private Double securityDeposit;
+    private String paymentFrequency;
     private String notes;
     private Boolean isActive;
     
@@ -44,6 +45,7 @@ public class TenantConnectionDto {
         this.rentEnd = connection.getEndDate();
         this.rentAmount = connection.getMonthlyRent();
         this.securityDeposit = connection.getSecurityDeposit();
+        this.paymentFrequency = connection.getPaymentFrequency();
         this.notes = connection.getNotes();
         this.isActive = connection.getIsActive();
         // apartmentId and propertyId will need to be set separately
@@ -129,7 +131,15 @@ public class TenantConnectionDto {
     public void setSecurityDeposit(Double securityDeposit) {
         this.securityDeposit = securityDeposit;
     }
-    
+
+    public String getPaymentFrequency() {
+        return paymentFrequency;
+    }
+
+    public void setPaymentFrequency(String paymentFrequency) {
+        this.paymentFrequency = paymentFrequency;
+    }
+
     public String getNotes() {
         return notes;
     }

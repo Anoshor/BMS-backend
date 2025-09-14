@@ -44,6 +44,9 @@ public class ConnectTenantRequest {
     @DecimalMin(value = "0.0", message = "Security deposit cannot be negative")
     private Double securityDeposit;
 
+    @NotBlank(message = "Payment frequency is required")
+    private String paymentFrequency;
+
     private String notes;
 
     // Manual getter methods to fix Lombok compilation issues
@@ -69,6 +72,10 @@ public class ConnectTenantRequest {
 
     public Double getSecurityDeposit() {
         return securityDeposit;
+    }
+
+    public String getPaymentFrequency() {
+        return paymentFrequency;
     }
 
     public String getNotes() {

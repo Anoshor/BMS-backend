@@ -15,7 +15,6 @@ public class MaintenanceRequestCreateRequest {
     @NotNull(message = "Service category ID is required")
     private UUID serviceCategoryId;
     
-    @NotBlank(message = "Title is required")
     private String title;
     
     @NotBlank(message = "Description is required")

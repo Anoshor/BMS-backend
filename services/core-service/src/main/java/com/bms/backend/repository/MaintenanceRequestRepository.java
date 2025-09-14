@@ -128,4 +128,10 @@ public interface MaintenanceRequestRepository extends JpaRepository<MaintenanceR
            "ORDER BY mr.createdAt DESC")
     List<MaintenanceRequest> findByTenantEmailAndPriority(@Param("tenantEmail") String tenantEmail, 
                                                          @Param("priority") MaintenanceRequest.Priority priority);
+
+    // Method for lease details to check if tenant has maintenance requests for apartment
+    @Query("SELECT CASE WHEN COUNT(mr) > 0 THEN true ELSE false END FROM MaintenanceRequest mr " +
+           "WHERE mr.apartment.id = :apartmentId AND mr.tenant.id = :tenantId")
+    boolean existsByApartmentIdAndTenantId(@Param("apartmentId") UUID apartmentId, 
+                                          @Param("tenantId") UUID tenantId);
 }
