@@ -15,6 +15,10 @@ public interface TenantPropertyConnectionRepository extends JpaRepository<Tenant
 
     List<TenantPropertyConnection> findByManagerAndIsActive(User manager, Boolean isActive);
 
+    List<TenantPropertyConnection> findByManagerOrderByCreatedAtDesc(User manager);
+
+    List<TenantPropertyConnection> findByManagerAndIsActiveOrderByCreatedAtDesc(User manager, Boolean isActive);
+
     List<TenantPropertyConnection> findByTenantAndIsActive(User tenant, Boolean isActive);
 
     @Query("SELECT tpc FROM TenantPropertyConnection tpc WHERE tpc.manager = :manager AND tpc.isActive = true AND " +

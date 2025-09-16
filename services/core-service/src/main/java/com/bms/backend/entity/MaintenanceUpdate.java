@@ -36,7 +36,14 @@ public class MaintenanceUpdate {
     @Enumerated(EnumType.STRING)
     @Column(name = "update_type")
     private UpdateType updateType = UpdateType.NOTE;
-    
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "current_status")
+    private MaintenanceRequest.Status currentStatus;
+
+    @Column(name = "notes", columnDefinition = "TEXT")
+    private String notes;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
@@ -104,6 +111,22 @@ public class MaintenanceUpdate {
 
     public void setUpdateType(UpdateType updateType) {
         this.updateType = updateType;
+    }
+
+    public MaintenanceRequest.Status getCurrentStatus() {
+        return currentStatus;
+    }
+
+    public void setCurrentStatus(MaintenanceRequest.Status currentStatus) {
+        this.currentStatus = currentStatus;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 
     public Instant getCreatedAt() {

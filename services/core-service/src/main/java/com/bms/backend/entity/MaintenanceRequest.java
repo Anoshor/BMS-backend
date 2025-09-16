@@ -64,7 +64,10 @@ public class MaintenanceRequest {
     
     @Column(name = "resolved_at")
     private Instant resolvedAt;
-    
+
+    @Column(name = "manager_initiated", nullable = false)
+    private Boolean managerInitiated = false;
+
     @OneToMany(mappedBy = "maintenanceRequest", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<MaintenanceRequestPhoto> photos;
     
@@ -194,6 +197,14 @@ public class MaintenanceRequest {
 
     public void setResolvedAt(Instant resolvedAt) {
         this.resolvedAt = resolvedAt;
+    }
+
+    public Boolean getManagerInitiated() {
+        return managerInitiated;
+    }
+
+    public void setManagerInitiated(Boolean managerInitiated) {
+        this.managerInitiated = managerInitiated;
     }
 
     public List<MaintenanceRequestPhoto> getPhotos() {

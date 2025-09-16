@@ -3,8 +3,14 @@ package com.bms.backend.controller;
 import com.bms.backend.dto.request.MaintenanceRequestCreateRequest;
 import com.bms.backend.dto.request.MaintenanceRequestUpdateRequest;
 import com.bms.backend.dto.request.MaintenanceUpdateRequest;
+import com.bms.backend.dto.request.MaintenanceStatusUpdateRequest;
+import com.bms.backend.dto.request.BulkMaintenanceRequestCreateRequest;
 import com.bms.backend.dto.response.ApiResponse;
+import com.bms.backend.dto.response.MaintenanceDetailsResponse;
+import com.bms.backend.dto.response.MaintenanceProgressResponse;
+import com.bms.backend.dto.response.BulkMaintenanceRequestResponse;
 import com.bms.backend.entity.*;
+import com.bms.backend.enums.UserRole;
 import com.bms.backend.service.MaintenanceRequestService;
 import com.bms.backend.service.ServiceCategoryService;
 import jakarta.validation.Valid;
@@ -40,6 +46,30 @@ public class MaintenanceController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, null, "Failed to create maintenance request: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/requests/bulk")
+    public ResponseEntity<ApiResponse<BulkMaintenanceRequestResponse>> createBulkMaintenanceRequests(@Valid @RequestBody BulkMaintenanceRequestCreateRequest request) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+
+            // Only managers can create bulk maintenance requests
+            if (!user.getRole().equals(UserRole.PROPERTY_MANAGER)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ApiResponse<>(false, null, "Only property managers can create bulk maintenance requests"));
+            }
+
+            BulkMaintenanceRequestResponse response = maintenanceRequestService.createBulkMaintenanceRequests(request, user);
+
+            String message = String.format("Bulk maintenance request completed. Created: %d, Failed: %d",
+                    response.getTotalCreated(), response.getTotalFailed());
+
+            return ResponseEntity.ok(new ApiResponse<>(true, response, message));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, null, "Failed to create bulk maintenance requests: " + e.getMessage()));
         }
     }
 
@@ -107,6 +137,20 @@ public class MaintenanceController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, null, "Failed to retrieve maintenance requests by category: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/requests/apartment/{apartmentId}")
+    public ResponseEntity<ApiResponse<List<MaintenanceRequest>>> getMaintenanceRequestsByApartment(@PathVariable UUID apartmentId) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+
+            List<MaintenanceRequest> requests = maintenanceRequestService.getMaintenanceRequestsByApartment(apartmentId, user);
+            return ResponseEntity.ok(new ApiResponse<>(true, requests, "Maintenance requests by apartment retrieved successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, null, "Failed to retrieve maintenance requests by apartment: " + e.getMessage()));
         }
     }
 
@@ -248,6 +292,67 @@ public class MaintenanceController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, null, "Failed to initialize default categories: " + e.getMessage()));
+        }
+    }
+
+    // NEW ENDPOINTS FOR ENHANCED MAINTENANCE MANAGEMENT
+
+    @GetMapping("/requests/{id}/details")
+    public ResponseEntity<ApiResponse<MaintenanceDetailsResponse>> getMaintenanceRequestDetails(@PathVariable UUID id) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+
+            MaintenanceDetailsResponse details = maintenanceRequestService.getMaintenanceRequestDetails(id, user);
+            return ResponseEntity.ok(new ApiResponse<>(true, details, "Maintenance request details retrieved successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse<>(false, null, e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, null, "Failed to retrieve maintenance request details: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/requests/{id}/progress")
+    public ResponseEntity<ApiResponse<List<MaintenanceProgressResponse>>> getMaintenanceRequestProgress(@PathVariable UUID id) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+
+            List<MaintenanceProgressResponse> progress = maintenanceRequestService.getMaintenanceRequestProgress(id, user);
+            return ResponseEntity.ok(new ApiResponse<>(true, progress, "Maintenance request progress retrieved successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse<>(false, null, e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, null, "Failed to retrieve maintenance request progress: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/requests/{id}/status")
+    public ResponseEntity<ApiResponse<MaintenanceProgressResponse>> updateMaintenanceRequestStatus(
+            @PathVariable UUID id,
+            @Valid @RequestBody MaintenanceStatusUpdateRequest request) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+
+            // Only managers can update status
+            if (!user.getRole().equals(UserRole.PROPERTY_MANAGER)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ApiResponse<>(false, null, "Only property managers can update maintenance request status"));
+            }
+
+            MaintenanceProgressResponse progress = maintenanceRequestService.updateMaintenanceRequestStatus(id, request, user);
+            return ResponseEntity.ok(new ApiResponse<>(true, progress, "Maintenance request status updated successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse<>(false, null, e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, null, "Failed to update maintenance request status: " + e.getMessage()));
         }
     }
 }
