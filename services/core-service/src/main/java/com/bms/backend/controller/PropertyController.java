@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/properties")
@@ -70,20 +71,58 @@ public class PropertyController {
 
     @GetMapping("/unoccupied")
     public ResponseEntity<ApiResponse<List<Property>>> getUnoccupiedProperties() {
-        
+
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
             List<Property> properties = propertyService.getUnoccupiedProperties(user);
-            
+
             return ResponseEntity.ok(ApiResponse.success(properties, "Unoccupied properties retrieved successfully"));
-            
+
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("Failed to retrieve unoccupied properties"));
+        }
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<Property>>> getAllProperties() {
+
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+            List<Property> properties = propertyService.getPropertiesByManager(user);
+
+            return ResponseEntity.ok(ApiResponse.success(properties, "Properties retrieved successfully"));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to retrieve properties"));
+        }
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<Property>> getPropertyById(@PathVariable Long id) {
+
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+            Property property = propertyService.getPropertyById(id, user);
+
+            return ResponseEntity.ok(ApiResponse.success(property, "Property retrieved successfully"));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to retrieve property"));
         }
     }
 }

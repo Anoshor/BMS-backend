@@ -44,7 +44,6 @@ public class ConnectTenantRequest {
     @DecimalMin(value = "0.0", message = "Security deposit cannot be negative")
     private Double securityDeposit;
 
-    @NotBlank(message = "Payment frequency is required")
     private String paymentFrequency;
 
     private String notes;

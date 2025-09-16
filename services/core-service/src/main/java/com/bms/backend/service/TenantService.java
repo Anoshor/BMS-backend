@@ -273,7 +273,16 @@ public class TenantService {
         dto.setTenantName(tenant.getFirstName() + " " + tenant.getLastName());
         dto.setTenantEmail(tenant.getEmail());
         dto.setTenantPhone(tenant.getPhone());
-        
+
+        // Manager Information
+        User manager = connection.getManager();
+        if (manager != null) {
+            dto.setManagerId(manager.getId());
+            dto.setManagerName(manager.getFirstName() + " " + manager.getLastName());
+            dto.setManagerEmail(manager.getEmail());
+            dto.setManagerPhone(manager.getPhone());
+        }
+
         // Lease Details
         dto.setLeaseStartDate(connection.getStartDate());
         dto.setLeaseEndDate(connection.getEndDate());
