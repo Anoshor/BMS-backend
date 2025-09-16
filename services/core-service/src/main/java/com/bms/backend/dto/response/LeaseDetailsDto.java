@@ -31,6 +31,12 @@ public class LeaseDetailsDto {
     private String tenantName;
     private String tenantEmail;
     private String tenantPhone;
+
+    // Manager/Property Manager Information
+    private UUID managerId;
+    private String managerName;
+    private String managerEmail;
+    private String managerPhone;
     
     // Lease Details
     @JsonFormat(pattern = "yyyy-MM-dd")
@@ -228,7 +234,39 @@ public class LeaseDetailsDto {
     public void setTenantPhone(String tenantPhone) {
         this.tenantPhone = tenantPhone;
     }
-    
+
+    public UUID getManagerId() {
+        return managerId;
+    }
+
+    public void setManagerId(UUID managerId) {
+        this.managerId = managerId;
+    }
+
+    public String getManagerName() {
+        return managerName;
+    }
+
+    public void setManagerName(String managerName) {
+        this.managerName = managerName;
+    }
+
+    public String getManagerEmail() {
+        return managerEmail;
+    }
+
+    public void setManagerEmail(String managerEmail) {
+        this.managerEmail = managerEmail;
+    }
+
+    public String getManagerPhone() {
+        return managerPhone;
+    }
+
+    public void setManagerPhone(String managerPhone) {
+        this.managerPhone = managerPhone;
+    }
+
     public LocalDate getLeaseStartDate() {
         return leaseStartDate;
     }

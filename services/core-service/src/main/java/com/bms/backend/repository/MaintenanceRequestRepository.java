@@ -98,8 +98,13 @@ public interface MaintenanceRequestRepository extends JpaRepository<MaintenanceR
     
     @Query("SELECT mr FROM MaintenanceRequest mr WHERE mr.serviceCategory.id = :serviceCategoryId " +
            "AND mr.apartment.property.manager = :manager")
-    List<MaintenanceRequest> findByServiceCategoryIdAndApartmentPropertyManager(@Param("serviceCategoryId") UUID serviceCategoryId, 
+    List<MaintenanceRequest> findByServiceCategoryIdAndApartmentPropertyManager(@Param("serviceCategoryId") UUID serviceCategoryId,
                                                                                @Param("manager") User manager);
+
+    @Query("SELECT mr FROM MaintenanceRequest mr WHERE mr.apartment.id = :apartmentId " +
+           "AND mr.apartment.property.manager = :manager")
+    List<MaintenanceRequest> findByApartmentIdAndApartmentPropertyManager(@Param("apartmentId") UUID apartmentId,
+                                                                          @Param("manager") User manager);
     
     @Query("SELECT mr FROM MaintenanceRequest mr WHERE mr.apartment.property.manager = :manager " +
            "AND (LOWER(mr.title) LIKE LOWER(CONCAT('%', :searchText, '%')) " +
