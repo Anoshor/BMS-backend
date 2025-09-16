@@ -18,7 +18,9 @@ public interface MaintenanceUpdateRepository extends JpaRepository<MaintenanceUp
     List<MaintenanceUpdate> findByMaintenanceRequest(MaintenanceRequest maintenanceRequest);
     
     List<MaintenanceUpdate> findByMaintenanceRequestOrderByCreatedAtAsc(MaintenanceRequest maintenanceRequest);
-    
+
+    List<MaintenanceUpdate> findByMaintenanceRequestOrderByCreatedAtDesc(MaintenanceRequest maintenanceRequest);
+
     List<MaintenanceUpdate> findByMaintenanceRequestIdOrderByCreatedAtDesc(UUID maintenanceRequestId);
     
     List<MaintenanceUpdate> findByUpdatedBy(User user);
