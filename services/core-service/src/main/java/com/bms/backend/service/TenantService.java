@@ -3,12 +3,14 @@ package com.bms.backend.service;
 import com.bms.backend.dto.request.ConnectTenantRequest;
 import com.bms.backend.dto.response.LeaseDetailsDto;
 import com.bms.backend.dto.response.TenantConnectionDto;
+import com.bms.backend.dto.response.TenantDetailsDto;
 import com.bms.backend.dto.response.TenantPropertyDto;
 import com.bms.backend.entity.*;
 import com.bms.backend.enums.UserRole;
 import com.bms.backend.repository.*;
 
 import java.time.Period;
+import java.util.ArrayList;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -338,5 +340,118 @@ public class TenantService {
     private boolean hasDocuments(Apartment apartment) {
         return apartment.getDocuments() != null && !apartment.getDocuments().trim().isEmpty() ||
                (apartment.getApartmentDocuments() != null && !apartment.getApartmentDocuments().isEmpty());
+    }
+
+    public TenantDetailsDto getTenantDetails(User manager, UUID tenantId) {
+        // Validate that the user is a manager
+        if (manager.getRole() != UserRole.PROPERTY_MANAGER) {
+            throw new IllegalArgumentException("Only property managers can view tenant details");
+        }
+
+        // Find the tenant by UUID
+        User tenant = userRepository.findById(tenantId)
+                .orElseThrow(() -> new IllegalArgumentException("Tenant not found with ID: " + tenantId));
+
+        // Verify the user is actually a tenant
+        if (tenant.getRole() != UserRole.TENANT) {
+            throw new IllegalArgumentException("User is not a tenant");
+        }
+
+        // Get all active connections for this tenant under the manager
+        List<TenantPropertyConnection> connections = connectionRepository.findByTenantAndManagerAndIsActive(tenant, manager, true);
+
+        if (connections.isEmpty()) {
+            throw new IllegalArgumentException("No active connections found for this tenant under your management");
+        }
+
+        // Build the tenant details DTO
+        TenantDetailsDto dto = new TenantDetailsDto();
+
+        // Set tenant basic information
+        dto.setTenantId(tenant.getId());
+        dto.setFirstName(tenant.getFirstName());
+        dto.setLastName(tenant.getLastName());
+        dto.setTenantName(tenant.getFirstName() + " " + tenant.getLastName());
+        dto.setEmail(tenant.getEmail());
+        dto.setPhone(tenant.getPhone());
+        dto.setAccountStatus(tenant.getAccountStatus() != null ? tenant.getAccountStatus().name() : "UNKNOWN");
+        dto.setCreatedAt(tenant.getCreatedAt());
+
+        // Build property information list
+        List<TenantDetailsDto.TenantPropertyInfo> propertyInfoList = new ArrayList<>();
+        double totalMonthlyRent = 0.0;
+        int activeLeaseCount = 0;
+
+        for (TenantPropertyConnection connection : connections) {
+            TenantDetailsDto.TenantPropertyInfo propertyInfo = new TenantDetailsDto.TenantPropertyInfo();
+
+            // Set connection details
+            propertyInfo.setConnectionId(connection.getId());
+            propertyInfo.setPropertyName(connection.getPropertyName());
+            propertyInfo.setLeaseStartDate(connection.getStartDate());
+            propertyInfo.setLeaseEndDate(connection.getEndDate());
+            propertyInfo.setLeaseDuration(calculateLeaseDuration(connection.getStartDate(), connection.getEndDate()));
+            propertyInfo.setMonthlyRent(connection.getMonthlyRent());
+            propertyInfo.setSecurityDeposit(connection.getSecurityDeposit());
+            propertyInfo.setPaymentFrequency(connection.getPaymentFrequency());
+            propertyInfo.setNotes(connection.getNotes());
+            propertyInfo.setIsActive(connection.getIsActive());
+
+            // Set manager information
+            User connectionManager = connection.getManager();
+            if (connectionManager != null) {
+                propertyInfo.setManagerId(connectionManager.getId());
+                propertyInfo.setManagerName(connectionManager.getFirstName() + " " + connectionManager.getLastName());
+                propertyInfo.setManagerEmail(connectionManager.getEmail());
+                propertyInfo.setManagerPhone(connectionManager.getPhone());
+            }
+
+            // Find apartment details based on tenant email and property name
+            List<Apartment> apartments = apartmentRepository.findByTenantEmail(tenant.getEmail());
+            for (Apartment apartment : apartments) {
+                if (apartment.getProperty().getName().equals(connection.getPropertyName())) {
+                    PropertyBuilding property = apartment.getProperty();
+
+                    // Set property details
+                    propertyInfo.setPropertyId(property.getId());
+                    propertyInfo.setPropertyType(property.getPropertyType());
+                    propertyInfo.setPropertyAddress(property.getAddress());
+
+                    // Set apartment/unit details
+                    propertyInfo.setApartmentId(apartment.getId());
+                    propertyInfo.setUnitNumber(apartment.getUnitNumber());
+                    propertyInfo.setFloor(apartment.getFloor());
+                    propertyInfo.setBedrooms(apartment.getBedrooms());
+                    propertyInfo.setBathrooms(apartment.getBathrooms());
+                    propertyInfo.setSquareFootage(apartment.getSquareFootage());
+                    propertyInfo.setOccupancyStatus(apartment.getOccupancyStatus());
+                    propertyInfo.setFurnished(apartment.getFurnished());
+                    propertyInfo.setMaintenanceCharges(apartment.getMaintenanceCharges());
+                    propertyInfo.setUtilityMeterNumbers(apartment.getUtilityMeterNumbers());
+
+                    // Set additional flags
+                    propertyInfo.setHasMaintenanceRequests(hasMaintenanceRequests(apartment.getId(), tenant.getId()));
+                    propertyInfo.setHasDocuments(hasDocuments(apartment));
+
+                    break;
+                }
+            }
+
+            propertyInfoList.add(propertyInfo);
+
+            // Calculate totals
+            if (connection.getIsActive() && connection.getMonthlyRent() != null) {
+                totalMonthlyRent += connection.getMonthlyRent();
+                activeLeaseCount++;
+            }
+        }
+
+        // Set summary information
+        dto.setProperties(propertyInfoList);
+        dto.setTotalActiveLeases(activeLeaseCount);
+        dto.setTotalProperties(propertyInfoList.size());
+        dto.setTotalMonthlyRent(totalMonthlyRent);
+
+        return dto;
     }
 }
