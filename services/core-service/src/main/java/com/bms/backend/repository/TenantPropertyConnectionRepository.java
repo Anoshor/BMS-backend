@@ -30,4 +30,6 @@ public interface TenantPropertyConnectionRepository extends JpaRepository<Tenant
                                                               @Param("searchText") String searchText);
 
     boolean existsByTenantAndPropertyNameAndIsActive(User tenant, String propertyName, Boolean isActive);
+
+    List<TenantPropertyConnection> findByTenantAndManagerAndIsActive(User tenant, User manager, Boolean isActive);
 }
