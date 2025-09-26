@@ -1,8 +1,11 @@
 package com.bms.backend.dto.response;
 
 import com.bms.backend.entity.MaintenanceRequest;
+import com.bms.backend.entity.MaintenanceRequestPhoto;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class MaintenanceRequestResponse {
     
@@ -21,6 +24,7 @@ public class MaintenanceRequestResponse {
     private Instant resolvedAt;
     private Instant createdAt;
     private Instant updatedAt;
+    private List<MaintenancePhotoResponse> photos;
 
     // Constructors
     public MaintenanceRequestResponse() {}
@@ -58,6 +62,13 @@ public class MaintenanceRequestResponse {
         this.resolvedAt = request.getResolvedAt();
         this.createdAt = request.getCreatedAt();
         this.updatedAt = request.getUpdatedAt();
+
+        // Photos info
+        if (request.getPhotos() != null) {
+            this.photos = request.getPhotos().stream()
+                    .map(MaintenancePhotoResponse::new)
+                    .collect(Collectors.toList());
+        }
     }
 
     // Getters and Setters
@@ -179,5 +190,13 @@ public class MaintenanceRequestResponse {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public List<MaintenancePhotoResponse> getPhotos() {
+        return photos;
+    }
+
+    public void setPhotos(List<MaintenancePhotoResponse> photos) {
+        this.photos = photos;
     }
 }

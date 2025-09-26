@@ -29,6 +29,12 @@ public class S3Service {
     @Value("${aws.s3.base-url}")
     private String baseUrl;
 
+    @Value("${aws.cloudfront.domain:}")
+    private String cloudFrontDomain;
+
+    @Value("${aws.cloudfront.enabled:false}")
+    private boolean cloudFrontEnabled;
+
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     private static final List<String> ALLOWED_IMAGE_TYPES = Arrays.asList(
             "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"
@@ -168,11 +174,25 @@ public class S3Service {
     }
 
     private String generateFileUrl(String key) {
-        return String.format("%s/%s/%s", baseUrl, bucketName, key);
+        if (cloudFrontEnabled && cloudFrontDomain != null && !cloudFrontDomain.isEmpty()) {
+            // Use CloudFront URL for faster loading
+            return String.format("https://%s/%s", cloudFrontDomain, key);
+        } else {
+            // Fallback to direct S3 URL
+            return String.format("%s/%s/%s", baseUrl, bucketName, key);
+        }
     }
 
     private String extractKeyFromUrl(String fileUrl) {
-        // Extract key from URL format: https://s3.us-east-2.amazonaws.com/bms-app-storage/users/uuid/folder/filename
+        // Handle CloudFront URLs: https://d1234567890abc.cloudfront.net/users/uuid/folder/filename
+        if (cloudFrontEnabled && cloudFrontDomain != null && fileUrl.contains(cloudFrontDomain)) {
+            String domainPart = "https://" + cloudFrontDomain + "/";
+            if (fileUrl.startsWith(domainPart)) {
+                return fileUrl.substring(domainPart.length());
+            }
+        }
+
+        // Handle S3 URLs: https://s3.us-east-2.amazonaws.com/bms-app-storage/users/uuid/folder/filename
         String bucketPart = "/" + bucketName + "/";
         int bucketIndex = fileUrl.indexOf(bucketPart);
         if (bucketIndex == -1) {
