@@ -8,6 +8,7 @@ import com.bms.backend.dto.request.BulkMaintenanceRequestCreateRequest;
 import com.bms.backend.dto.response.ApiResponse;
 import com.bms.backend.dto.response.MaintenanceDetailsResponse;
 import com.bms.backend.dto.response.MaintenanceProgressResponse;
+import com.bms.backend.dto.response.MaintenanceRequestResponse;
 import com.bms.backend.dto.response.BulkMaintenanceRequestResponse;
 import com.bms.backend.entity.*;
 import com.bms.backend.enums.UserRole;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/maintenance")
@@ -74,13 +76,16 @@ public class MaintenanceController {
     }
 
     @GetMapping("/requests")
-    public ResponseEntity<ApiResponse<List<MaintenanceRequest>>> getMyMaintenanceRequests() {
+    public ResponseEntity<ApiResponse<List<MaintenanceRequestResponse>>> getMyMaintenanceRequests() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
 
             List<MaintenanceRequest> requests = maintenanceRequestService.getMaintenanceRequestsByManager(user);
-            return ResponseEntity.ok(new ApiResponse<>(true, requests, "Maintenance requests retrieved successfully"));
+            List<MaintenanceRequestResponse> responses = requests.stream()
+                    .map(MaintenanceRequestResponse::new)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(new ApiResponse<>(true, responses, "Maintenance requests retrieved successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, null, "Failed to retrieve maintenance requests: " + e.getMessage()));
@@ -99,13 +104,16 @@ public class MaintenanceController {
     }
 
     @GetMapping("/requests/status/{status}")
-    public ResponseEntity<ApiResponse<List<MaintenanceRequest>>> getMaintenanceRequestsByStatus(@PathVariable MaintenanceRequest.Status status) {
+    public ResponseEntity<ApiResponse<List<MaintenanceRequestResponse>>> getMaintenanceRequestsByStatus(@PathVariable MaintenanceRequest.Status status) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
 
             List<MaintenanceRequest> requests = maintenanceRequestService.getMaintenanceRequestsByStatus(status, user);
-            return ResponseEntity.ok(new ApiResponse<>(true, requests, "Maintenance requests by status retrieved successfully"));
+            List<MaintenanceRequestResponse> responses = requests.stream()
+                    .map(MaintenanceRequestResponse::new)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(new ApiResponse<>(true, responses, "Maintenance requests by status retrieved successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, null, "Failed to retrieve maintenance requests by status: " + e.getMessage()));
@@ -113,13 +121,16 @@ public class MaintenanceController {
     }
 
     @GetMapping("/requests/priority/{priority}")
-    public ResponseEntity<ApiResponse<List<MaintenanceRequest>>> getMaintenanceRequestsByPriority(@PathVariable MaintenanceRequest.Priority priority) {
+    public ResponseEntity<ApiResponse<List<MaintenanceRequestResponse>>> getMaintenanceRequestsByPriority(@PathVariable MaintenanceRequest.Priority priority) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
 
             List<MaintenanceRequest> requests = maintenanceRequestService.getMaintenanceRequestsByPriority(priority, user);
-            return ResponseEntity.ok(new ApiResponse<>(true, requests, "Maintenance requests by priority retrieved successfully"));
+            List<MaintenanceRequestResponse> responses = requests.stream()
+                    .map(MaintenanceRequestResponse::new)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(new ApiResponse<>(true, responses, "Maintenance requests by priority retrieved successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, null, "Failed to retrieve maintenance requests by priority: " + e.getMessage()));
@@ -127,13 +138,16 @@ public class MaintenanceController {
     }
 
     @GetMapping("/requests/category/{categoryId}")
-    public ResponseEntity<ApiResponse<List<MaintenanceRequest>>> getMaintenanceRequestsByCategory(@PathVariable UUID categoryId) {
+    public ResponseEntity<ApiResponse<List<MaintenanceRequestResponse>>> getMaintenanceRequestsByCategory(@PathVariable UUID categoryId) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
 
             List<MaintenanceRequest> requests = maintenanceRequestService.getMaintenanceRequestsByServiceCategory(categoryId, user);
-            return ResponseEntity.ok(new ApiResponse<>(true, requests, "Maintenance requests by category retrieved successfully"));
+            List<MaintenanceRequestResponse> responses = requests.stream()
+                    .map(MaintenanceRequestResponse::new)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(new ApiResponse<>(true, responses, "Maintenance requests by category retrieved successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, null, "Failed to retrieve maintenance requests by category: " + e.getMessage()));
@@ -141,13 +155,16 @@ public class MaintenanceController {
     }
 
     @GetMapping("/requests/apartment/{apartmentId}")
-    public ResponseEntity<ApiResponse<List<MaintenanceRequest>>> getMaintenanceRequestsByApartment(@PathVariable UUID apartmentId) {
+    public ResponseEntity<ApiResponse<List<MaintenanceRequestResponse>>> getMaintenanceRequestsByApartment(@PathVariable UUID apartmentId) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
 
             List<MaintenanceRequest> requests = maintenanceRequestService.getMaintenanceRequestsByApartment(apartmentId, user);
-            return ResponseEntity.ok(new ApiResponse<>(true, requests, "Maintenance requests by apartment retrieved successfully"));
+            List<MaintenanceRequestResponse> responses = requests.stream()
+                    .map(MaintenanceRequestResponse::new)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(new ApiResponse<>(true, responses, "Maintenance requests by apartment retrieved successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, null, "Failed to retrieve maintenance requests by apartment: " + e.getMessage()));
@@ -155,13 +172,16 @@ public class MaintenanceController {
     }
 
     @GetMapping("/requests/assigned")
-    public ResponseEntity<ApiResponse<List<MaintenanceRequest>>> getAssignedMaintenanceRequests() {
+    public ResponseEntity<ApiResponse<List<MaintenanceRequestResponse>>> getAssignedMaintenanceRequests() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
 
             List<MaintenanceRequest> requests = maintenanceRequestService.getMaintenanceRequestsByAssignee(user);
-            return ResponseEntity.ok(new ApiResponse<>(true, requests, "Assigned maintenance requests retrieved successfully"));
+            List<MaintenanceRequestResponse> responses = requests.stream()
+                    .map(MaintenanceRequestResponse::new)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(new ApiResponse<>(true, responses, "Assigned maintenance requests retrieved successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, null, "Failed to retrieve assigned maintenance requests: " + e.getMessage()));
@@ -169,13 +189,16 @@ public class MaintenanceController {
     }
 
     @GetMapping("/requests/search")
-    public ResponseEntity<ApiResponse<List<MaintenanceRequest>>> searchMaintenanceRequests(@RequestParam String searchText) {
+    public ResponseEntity<ApiResponse<List<MaintenanceRequestResponse>>> searchMaintenanceRequests(@RequestParam String searchText) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
 
             List<MaintenanceRequest> requests = maintenanceRequestService.searchMaintenanceRequests(searchText, user);
-            return ResponseEntity.ok(new ApiResponse<>(true, requests, "Maintenance requests search completed"));
+            List<MaintenanceRequestResponse> responses = requests.stream()
+                    .map(MaintenanceRequestResponse::new)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(new ApiResponse<>(true, responses, "Maintenance requests search completed"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, null, "Failed to search maintenance requests: " + e.getMessage()));

@@ -7,10 +7,12 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 public class TenantConnectionDto {
-    
+
+    private UUID tenantId;
     private String tenantName;
     private String tenantEmail;
     private String tenantPhone;
+    private String tenantImage;
     private UUID apartmentId;
     private UUID propertyId;
     private String propertyName;
@@ -36,9 +38,11 @@ public class TenantConnectionDto {
     // Constructor from TenantPropertyConnection
     public TenantConnectionDto(TenantPropertyConnection connection) {
         if (connection.getTenant() != null) {
+            this.tenantId = connection.getTenant().getId();
             this.tenantName = connection.getTenant().getFirstName() + " " + connection.getTenant().getLastName();
             this.tenantEmail = connection.getTenant().getEmail();
             this.tenantPhone = connection.getTenant().getPhone();
+            this.tenantImage = connection.getTenant().getProfileImageUrl();
         }
         this.propertyName = connection.getPropertyName();
         this.rentStart = connection.getStartDate();
@@ -52,6 +56,14 @@ public class TenantConnectionDto {
     }
     
     // Getters and Setters
+    public UUID getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(UUID tenantId) {
+        this.tenantId = tenantId;
+    }
+
     public String getTenantName() {
         return tenantName;
     }
@@ -75,7 +87,15 @@ public class TenantConnectionDto {
     public void setTenantPhone(String tenantPhone) {
         this.tenantPhone = tenantPhone;
     }
-    
+
+    public String getTenantImage() {
+        return tenantImage;
+    }
+
+    public void setTenantImage(String tenantImage) {
+        this.tenantImage = tenantImage;
+    }
+
     public UUID getApartmentId() {
         return apartmentId;
     }

@@ -4,6 +4,7 @@ import com.bms.backend.dto.request.ConnectTenantRequest;
 import com.bms.backend.dto.response.ApiResponse;
 import com.bms.backend.dto.response.LeaseDetailsDto;
 import com.bms.backend.dto.response.TenantConnectionDto;
+import com.bms.backend.dto.response.TenantDetailsDto;
 import com.bms.backend.dto.response.TenantPropertyDto;
 import com.bms.backend.dto.response.UserDto;
 import com.bms.backend.entity.TenantPropertyConnection;
@@ -166,6 +167,25 @@ public class TenantController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("Failed to retrieve lease details"));
+        }
+    }
+
+    @GetMapping("/details/{tenantId}")
+    public ResponseEntity<ApiResponse<TenantDetailsDto>> getTenantDetails(@PathVariable UUID tenantId) {
+
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User manager = (User) authentication.getPrincipal();
+
+            TenantDetailsDto tenantDetails = tenantService.getTenantDetails(manager, tenantId);
+            return ResponseEntity.ok(ApiResponse.success(tenantDetails, "Tenant details retrieved successfully"));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to retrieve tenant details"));
         }
     }
 }
