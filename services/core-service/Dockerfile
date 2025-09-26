@@ -1,51 +1,42 @@
 # Multi-stage build for optimized production image
-FROM openjdk:17-jdk-slim AS builder
+FROM maven:3.9.4-eclipse-temurin-17 AS builder
 
 # Set working directory
 WORKDIR /app
-
-# Install Maven
-RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
 
 # Copy pom.xml first (for dependency caching)
 COPY pom.xml .
 
-# Download dependencies (this layer will be cached if pom.xml doesn't change)
-RUN mvn dependency:go-offline -B
+# Download dependencies with cache mount (this layer will be cached if pom.xml doesn't change)
+RUN --mount=type=cache,target=/root/.m2 mvn dependency:go-offline -B
 
 # Copy source code
 COPY src ./src
 
-# Build the application
-RUN mvn clean package -DskipTests
+# Build the application with cache mount
+RUN --mount=type=cache,target=/root/.m2 mvn clean package -DskipTests
 
-# Production stage
-FROM eclipse-temurin:17-jre
+# Production stage - using distroless for smaller, more secure image
+FROM gcr.io/distroless/java17-debian12
 
 # Set working directory
 WORKDIR /app
-
-# Create non-root user for security
-RUN groupadd -r bmsapp && useradd -r -g bmsapp bmsapp
 
 # Copy the jar file from builder stage
 COPY --from=builder /app/target/bms-backend-*.jar app.jar
 
 # Create data directory for H2 database
-RUN mkdir -p /app/data && chown -R bmsapp:bmsapp /app
+# Note: distroless doesn't have mkdir, so we use COPY to create structure
+COPY --from=builder --chown=nonroot:nonroot /tmp /app/data
 
-# Switch to non-root user
-USER bmsapp
+# Switch to non-root user (distroless has nonroot user by default)
+USER nonroot
 
 # Expose port
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:8080/api/v1/health || exit 1
-
 # JVM options for containerized environment
-ENV JAVA_OPTS="-Xms512m -Xmx1024m -XX:+UseG1GC -XX:G1HeapRegionSize=16m"
+ENV JAVA_OPTS="-Xms512m -Xmx1024m -XX:+UseG1GC -XX:G1HeapRegionSize=16m -XX:+UseContainerSupport"
 
 # Run the application
-CMD ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
+CMD ["java", "-jar", "/app/app.jar"]

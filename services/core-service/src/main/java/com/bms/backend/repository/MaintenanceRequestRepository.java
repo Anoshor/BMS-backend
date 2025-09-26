@@ -80,58 +80,88 @@ public interface MaintenanceRequestRepository extends JpaRepository<MaintenanceR
                                                              Pageable pageable);
     
     // Additional methods needed by MaintenanceRequestService
-    @Query("SELECT mr FROM MaintenanceRequest mr WHERE mr.apartment.property.manager = :manager")
+    @Query("SELECT mr FROM MaintenanceRequest mr " +
+           "LEFT JOIN FETCH mr.photos " +
+           "LEFT JOIN FETCH mr.serviceCategory " +
+           "WHERE mr.apartment.property.manager = :manager")
     List<MaintenanceRequest> findByApartmentPropertyManager(@Param("manager") User manager);
     
-    @Query("SELECT mr FROM MaintenanceRequest mr WHERE mr.apartment.tenantEmail = :tenantEmail")
+    @Query("SELECT mr FROM MaintenanceRequest mr " +
+           "LEFT JOIN FETCH mr.photos " +
+           "LEFT JOIN FETCH mr.serviceCategory " +
+           "WHERE mr.apartment.tenantEmail = :tenantEmail")
     List<MaintenanceRequest> findByApartmentTenantEmail(@Param("tenantEmail") String tenantEmail);
     
-    @Query("SELECT mr FROM MaintenanceRequest mr WHERE mr.status = :status " +
+    @Query("SELECT mr FROM MaintenanceRequest mr " +
+           "LEFT JOIN FETCH mr.photos " +
+           "LEFT JOIN FETCH mr.serviceCategory " +
+           "WHERE mr.status = :status " +
            "AND mr.apartment.property.manager = :manager")
-    List<MaintenanceRequest> findByStatusAndApartmentPropertyManager(@Param("status") MaintenanceRequest.Status status, 
+    List<MaintenanceRequest> findByStatusAndApartmentPropertyManager(@Param("status") MaintenanceRequest.Status status,
                                                                    @Param("manager") User manager);
     
-    @Query("SELECT mr FROM MaintenanceRequest mr WHERE mr.priority = :priority " +
+    @Query("SELECT mr FROM MaintenanceRequest mr " +
+           "LEFT JOIN FETCH mr.photos " +
+           "LEFT JOIN FETCH mr.serviceCategory " +
+           "WHERE mr.priority = :priority " +
            "AND mr.apartment.property.manager = :manager")
-    List<MaintenanceRequest> findByPriorityAndApartmentPropertyManager(@Param("priority") MaintenanceRequest.Priority priority, 
+    List<MaintenanceRequest> findByPriorityAndApartmentPropertyManager(@Param("priority") MaintenanceRequest.Priority priority,
                                                                       @Param("manager") User manager);
     
-    @Query("SELECT mr FROM MaintenanceRequest mr WHERE mr.serviceCategory.id = :serviceCategoryId " +
+    @Query("SELECT mr FROM MaintenanceRequest mr " +
+           "LEFT JOIN FETCH mr.photos " +
+           "LEFT JOIN FETCH mr.serviceCategory " +
+           "WHERE mr.serviceCategory.id = :serviceCategoryId " +
            "AND mr.apartment.property.manager = :manager")
     List<MaintenanceRequest> findByServiceCategoryIdAndApartmentPropertyManager(@Param("serviceCategoryId") UUID serviceCategoryId,
                                                                                @Param("manager") User manager);
 
-    @Query("SELECT mr FROM MaintenanceRequest mr WHERE mr.apartment.id = :apartmentId " +
+    @Query("SELECT mr FROM MaintenanceRequest mr " +
+           "LEFT JOIN FETCH mr.photos " +
+           "LEFT JOIN FETCH mr.serviceCategory " +
+           "WHERE mr.apartment.id = :apartmentId " +
            "AND mr.apartment.property.manager = :manager")
     List<MaintenanceRequest> findByApartmentIdAndApartmentPropertyManager(@Param("apartmentId") UUID apartmentId,
                                                                           @Param("manager") User manager);
     
-    @Query("SELECT mr FROM MaintenanceRequest mr WHERE mr.apartment.property.manager = :manager " +
+    @Query("SELECT mr FROM MaintenanceRequest mr " +
+           "LEFT JOIN FETCH mr.photos " +
+           "LEFT JOIN FETCH mr.serviceCategory " +
+           "WHERE mr.apartment.property.manager = :manager " +
            "AND (LOWER(mr.title) LIKE LOWER(CONCAT('%', :searchText, '%')) " +
            "OR LOWER(mr.description) LIKE LOWER(CONCAT('%', :searchText, '%')) " +
            "OR LOWER(mr.apartment.unitNumber) LIKE LOWER(CONCAT('%', :searchText, '%')) " +
            "OR LOWER(mr.serviceCategory.name) LIKE LOWER(CONCAT('%', :searchText, '%')))")
-    List<MaintenanceRequest> findBySearchTextAndManager(@Param("searchText") String searchText, 
+    List<MaintenanceRequest> findBySearchTextAndManager(@Param("searchText") String searchText,
                                                        @Param("manager") User manager);
 
     // Tenant-specific query methods for dashboard
-    @Query("SELECT mr FROM MaintenanceRequest mr WHERE " +
+    @Query("SELECT mr FROM MaintenanceRequest mr " +
+           "LEFT JOIN FETCH mr.photos " +
+           "LEFT JOIN FETCH mr.serviceCategory " +
+           "WHERE " +
            "(mr.tenant IS NOT NULL AND mr.tenant.email = :tenantEmail) OR " +
            "mr.requester.email = :tenantEmail")
     List<MaintenanceRequest> findByTenantEmail(@Param("tenantEmail") String tenantEmail);
 
-    @Query("SELECT mr FROM MaintenanceRequest mr WHERE " +
+    @Query("SELECT mr FROM MaintenanceRequest mr " +
+           "LEFT JOIN FETCH mr.photos " +
+           "LEFT JOIN FETCH mr.serviceCategory " +
+           "WHERE " +
            "((mr.tenant IS NOT NULL AND mr.tenant.email = :tenantEmail) OR " +
            "mr.requester.email = :tenantEmail) AND mr.status = :status " +
            "ORDER BY mr.createdAt DESC")
-    List<MaintenanceRequest> findByTenantEmailAndStatus(@Param("tenantEmail") String tenantEmail, 
+    List<MaintenanceRequest> findByTenantEmailAndStatus(@Param("tenantEmail") String tenantEmail,
                                                        @Param("status") MaintenanceRequest.Status status);
 
-    @Query("SELECT mr FROM MaintenanceRequest mr WHERE " +
+    @Query("SELECT mr FROM MaintenanceRequest mr " +
+           "LEFT JOIN FETCH mr.photos " +
+           "LEFT JOIN FETCH mr.serviceCategory " +
+           "WHERE " +
            "((mr.tenant IS NOT NULL AND mr.tenant.email = :tenantEmail) OR " +
            "mr.requester.email = :tenantEmail) AND mr.priority = :priority " +
            "ORDER BY mr.createdAt DESC")
-    List<MaintenanceRequest> findByTenantEmailAndPriority(@Param("tenantEmail") String tenantEmail, 
+    List<MaintenanceRequest> findByTenantEmailAndPriority(@Param("tenantEmail") String tenantEmail,
                                                          @Param("priority") MaintenanceRequest.Priority priority);
 
     // Method for lease details to check if tenant has maintenance requests for apartment
