@@ -1,0 +1,44 @@
+# FAST BUILD VERSION - Single architecture, optimized for development
+FROM maven:3.9.4-eclipse-temurin-17 AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy pom.xml first (for dependency caching)
+COPY pom.xml .
+
+# Download dependencies with cache mount - Use offline mode for faster builds
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn dependency:go-offline -B -q && \
+    mvn dependency:resolve-sources -B -q
+
+# Copy source code
+COPY src ./src
+
+# Build the application with cache mount - Skip tests and use parallel builds
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn clean package -DskipTests -T 1C -q
+
+# Production stage - using distroless for smaller, more secure image
+FROM gcr.io/distroless/java17-debian12
+
+# Set working directory
+WORKDIR /app
+
+# Copy the jar file from builder stage
+COPY --from=builder /app/target/bms-backend-*.jar app.jar
+
+# Create data directory for H2 database
+COPY --from=builder --chown=nonroot:nonroot /tmp /app/data
+
+# Switch to non-root user
+USER nonroot
+
+# Expose port
+EXPOSE 8080
+
+# Optimized JVM options for faster startup and container environment
+ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -XX:G1HeapRegionSize=8m -XX:+UseContainerSupport -XX:TieredStopAtLevel=1 -XX:+UnlockExperimentalVMOptions -XX:+UseJVMCICompiler"
+
+# Run the application
+CMD ["java", "-jar", "/app/app.jar"]
