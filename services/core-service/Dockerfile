@@ -16,21 +16,24 @@ COPY src ./src
 # Build the application with cache mount
 RUN --mount=type=cache,target=/root/.m2 mvn clean package -DskipTests
 
-# Production stage - using distroless for smaller, more secure image
-FROM gcr.io/distroless/java17-debian12
+# Production stage - using Eclipse Temurin for reliable Java runtime
+FROM eclipse-temurin:17-jre
 
 # Set working directory
 WORKDIR /app
+
+# Create non-root user
+RUN groupadd -g 1001 appuser && \
+    useradd -r -u 1001 -g appuser -d /app -s /bin/bash appuser
 
 # Copy the jar file from builder stage
 COPY --from=builder /app/target/bms-backend-*.jar app.jar
 
 # Create data directory for H2 database
-# Note: distroless doesn't have mkdir, so we use COPY to create structure
-COPY --from=builder --chown=nonroot:nonroot /tmp /app/data
+RUN mkdir -p /app/data && chown -R appuser:appuser /app
 
-# Switch to non-root user (distroless has nonroot user by default)
-USER nonroot
+# Switch to non-root user
+USER appuser
 
 # Expose port
 EXPOSE 8080

@@ -8,8 +8,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class EmailService {
-    
-    @Autowired
+
+    @Autowired(required = false)
     private JavaMailSender mailSender;
     
     @Value("${spring.mail.from:noreply@bms.com}")
@@ -81,13 +81,18 @@ public class EmailService {
     }
     
     private void sendEmail(String toEmail, String subject, String body) {
+        if (mailSender == null) {
+            System.out.println("Mail not configured - Email would be sent to: " + toEmail + " with subject: " + subject);
+            return;
+        }
+
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromEmail);
             message.setTo(toEmail);
             message.setSubject(subject);
             message.setText(body);
-            
+
             mailSender.send(message);
         } catch (Exception e) {
             // Log the error but don't throw exception to avoid breaking the registration flow
