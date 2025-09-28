@@ -301,4 +301,5 @@ class TenantServiceTest {
         assertEquals(1, result.getTotalActiveLeases());
         assertEquals(1500.0, result.getTotalMonthlyRent()); // Only active connection rent
     }
+
 }

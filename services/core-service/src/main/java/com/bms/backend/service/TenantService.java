@@ -182,6 +182,8 @@ public class TenantService {
                             if (apartment.getProperty().getName().equals(connection.getPropertyName())) {
                                 dto.setApartmentId(apartment.getId());
                                 dto.setPropertyId(apartment.getProperty().getId());
+                                dto.setPropertyAddress(apartment.getProperty().getAddress());
+                                dto.setUnitName(apartment.getUnitNumber());
                                 break;
                             }
                         }

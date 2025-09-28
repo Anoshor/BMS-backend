@@ -16,6 +16,8 @@ public class TenantConnectionDto {
     private UUID apartmentId;
     private UUID propertyId;
     private String propertyName;
+    private String propertyAddress;
+    private String unitName;
     
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate rentStart;
@@ -118,6 +120,22 @@ public class TenantConnectionDto {
     
     public void setPropertyName(String propertyName) {
         this.propertyName = propertyName;
+    }
+
+    public String getPropertyAddress() {
+        return propertyAddress;
+    }
+
+    public void setPropertyAddress(String propertyAddress) {
+        this.propertyAddress = propertyAddress;
+    }
+
+    public String getUnitName() {
+        return unitName;
+    }
+
+    public void setUnitName(String unitName) {
+        this.unitName = unitName;
     }
     
     public LocalDate getRentStart() {
