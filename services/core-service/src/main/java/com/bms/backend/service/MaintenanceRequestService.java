@@ -90,7 +90,7 @@ public class MaintenanceRequestService {
     }
 
     public List<MaintenanceRequest> getMaintenanceRequestsByManager(User manager) {
-        return maintenanceRequestRepository.findByApartmentPropertyManager(manager);
+        return maintenanceRequestRepository.findByManagerWithDetails(manager);
     }
 
     public List<MaintenanceRequest> getMaintenanceRequestsByTenant(String tenantEmail) {
@@ -118,7 +118,7 @@ public class MaintenanceRequestService {
     }
 
     public Optional<MaintenanceRequest> getMaintenanceRequestById(UUID id) {
-        return maintenanceRequestRepository.findById(id);
+        return maintenanceRequestRepository.findByIdWithDetails(id);
     }
 
     public MaintenanceRequest updateMaintenanceRequest(UUID id, MaintenanceRequestUpdateRequest request, User updater) {
@@ -240,7 +240,7 @@ public class MaintenanceRequestService {
     // NEW ENHANCED MAINTENANCE MANAGEMENT METHODS
 
     public MaintenanceDetailsResponse getMaintenanceRequestDetails(UUID id, User user) {
-        Optional<MaintenanceRequest> requestOpt = maintenanceRequestRepository.findById(id);
+        Optional<MaintenanceRequest> requestOpt = maintenanceRequestRepository.findByIdWithDetails(id);
 
         if (requestOpt.isEmpty()) {
             throw new IllegalArgumentException("Maintenance request not found");
@@ -285,7 +285,7 @@ public class MaintenanceRequestService {
     }
 
     public List<MaintenanceProgressResponse> getMaintenanceRequestProgress(UUID id, User user) {
-        Optional<MaintenanceRequest> requestOpt = maintenanceRequestRepository.findById(id);
+        Optional<MaintenanceRequest> requestOpt = maintenanceRequestRepository.findByIdWithDetails(id);
 
         if (requestOpt.isEmpty()) {
             throw new IllegalArgumentException("Maintenance request not found");
@@ -314,7 +314,7 @@ public class MaintenanceRequestService {
     }
 
     public MaintenanceProgressResponse updateMaintenanceRequestStatus(UUID id, MaintenanceStatusUpdateRequest request, User manager) {
-        Optional<MaintenanceRequest> requestOpt = maintenanceRequestRepository.findById(id);
+        Optional<MaintenanceRequest> requestOpt = maintenanceRequestRepository.findByIdWithDetails(id);
 
         if (requestOpt.isEmpty()) {
             throw new IllegalArgumentException("Maintenance request not found");

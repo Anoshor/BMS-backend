@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -167,6 +168,32 @@ public interface MaintenanceRequestRepository extends JpaRepository<MaintenanceR
     // Method for lease details to check if tenant has maintenance requests for apartment
     @Query("SELECT CASE WHEN COUNT(mr) > 0 THEN true ELSE false END FROM MaintenanceRequest mr " +
            "WHERE mr.apartment.id = :apartmentId AND mr.tenant.id = :tenantId")
-    boolean existsByApartmentIdAndTenantId(@Param("apartmentId") UUID apartmentId, 
+    boolean existsByApartmentIdAndTenantId(@Param("apartmentId") UUID apartmentId,
                                           @Param("tenantId") UUID tenantId);
+
+    // Method to fetch maintenance request with all related entities including landlord details
+    @Query("SELECT mr FROM MaintenanceRequest mr " +
+           "LEFT JOIN FETCH mr.apartment a " +
+           "LEFT JOIN FETCH a.property p " +
+           "LEFT JOIN FETCH p.manager " +
+           "LEFT JOIN FETCH mr.photos " +
+           "LEFT JOIN FETCH mr.serviceCategory " +
+           "LEFT JOIN FETCH mr.requester " +
+           "LEFT JOIN FETCH mr.tenant " +
+           "LEFT JOIN FETCH mr.assignedTo " +
+           "WHERE mr.id = :id")
+    Optional<MaintenanceRequest> findByIdWithDetails(@Param("id") UUID id);
+
+    // Method to fetch all maintenance requests with related entities for a manager
+    @Query("SELECT mr FROM MaintenanceRequest mr " +
+           "LEFT JOIN FETCH mr.apartment a " +
+           "LEFT JOIN FETCH a.property p " +
+           "LEFT JOIN FETCH p.manager " +
+           "LEFT JOIN FETCH mr.photos " +
+           "LEFT JOIN FETCH mr.serviceCategory " +
+           "LEFT JOIN FETCH mr.requester " +
+           "LEFT JOIN FETCH mr.tenant " +
+           "LEFT JOIN FETCH mr.assignedTo " +
+           "WHERE mr.apartment.property.manager = :manager")
+    List<MaintenanceRequest> findByManagerWithDetails(@Param("manager") User manager);
 }

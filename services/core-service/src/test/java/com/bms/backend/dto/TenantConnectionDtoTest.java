@@ -89,10 +89,23 @@ class TenantConnectionDtoTest {
     void testTenantConnectionDto_SettersAndGetters() {
         TenantConnectionDto dto = new TenantConnectionDto();
         UUID testTenantId = UUID.randomUUID();
+        UUID testApartmentId = UUID.randomUUID();
+        UUID testPropertyId = UUID.randomUUID();
 
         // Test tenantId setter and getter
         dto.setTenantId(testTenantId);
         assertEquals(testTenantId, dto.getTenantId());
+
+        // Test new field setters and getters
+        dto.setApartmentId(testApartmentId);
+        dto.setPropertyId(testPropertyId);
+        dto.setPropertyAddress("123 Main St, City, State");
+        dto.setUnitName("Unit 101");
+
+        assertEquals(testApartmentId, dto.getApartmentId());
+        assertEquals(testPropertyId, dto.getPropertyId());
+        assertEquals("123 Main St, City, State", dto.getPropertyAddress());
+        assertEquals("Unit 101", dto.getUnitName());
 
         // Test other setters
         dto.setTenantName("Test Name");
@@ -119,6 +132,24 @@ class TenantConnectionDtoTest {
         assertNull(dto.getTenantName());
         assertNull(dto.getTenantEmail());
         assertNull(dto.getTenantPhone());
+    }
+
+    @Test
+    void testTenantConnectionDto_NewFieldsNotNull() {
+        // Create DTO from connection
+        TenantConnectionDto dto = new TenantConnectionDto(connection);
+
+        // The new fields propertyAddress and unitName should be settable
+        dto.setPropertyAddress("456 Property Address");
+        dto.setUnitName("Unit 202");
+
+        // Verify the new fields are properly set
+        assertEquals("456 Property Address", dto.getPropertyAddress());
+        assertEquals("Unit 202", dto.getUnitName());
+
+        // Verify these fields are included in the interface consistency
+        assertNotNull(dto.getPropertyAddress());
+        assertNotNull(dto.getUnitName());
     }
 
     @Test
