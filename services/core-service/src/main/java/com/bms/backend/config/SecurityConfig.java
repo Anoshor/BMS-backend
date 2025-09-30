@@ -76,6 +76,9 @@ public class SecurityConfig {
                         // Admin endpoints - For now allow all (in production add proper admin auth)
                         .requestMatchers("/api/v1/admin/**").permitAll()
 
+                        // Debug endpoints (development only)
+                        .requestMatchers("/api/v1/debug/**").permitAll()
+
                         // Property endpoints (accessible by authenticated managers)
                         .requestMatchers("/api/v1/properties/**").authenticated()
 

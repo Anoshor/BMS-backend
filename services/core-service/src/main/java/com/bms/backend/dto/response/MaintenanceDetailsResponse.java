@@ -28,6 +28,12 @@ public class MaintenanceDetailsResponse {
     private String assignedToName;
     private String assignedToEmail;
 
+    // Landlord (Property Manager) information
+    private UUID landlordId;
+    private String landlordName;
+    private String landlordEmail;
+    private String landlordPhone;
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "UTC")
     private Instant submittedAt;
 
@@ -90,6 +96,15 @@ public class MaintenanceDetailsResponse {
             this.assignedToId = request.getAssignedTo().getId();
             this.assignedToName = request.getAssignedTo().getFirstName() + " " + request.getAssignedTo().getLastName();
             this.assignedToEmail = request.getAssignedTo().getEmail();
+        }
+
+        // Landlord (Property Manager) info
+        if (request.getApartment() != null && request.getApartment().getProperty() != null && request.getApartment().getProperty().getManager() != null) {
+            var manager = request.getApartment().getProperty().getManager();
+            this.landlordId = manager.getId();
+            this.landlordName = manager.getFirstName() + " " + manager.getLastName();
+            this.landlordEmail = manager.getEmail();
+            this.landlordPhone = manager.getPhone();
         }
 
         this.submittedAt = request.getSubmittedAt();
@@ -307,5 +322,37 @@ public class MaintenanceDetailsResponse {
 
     public void setProgressHistory(List<MaintenanceProgressResponse> progressHistory) {
         this.progressHistory = progressHistory;
+    }
+
+    public UUID getLandlordId() {
+        return landlordId;
+    }
+
+    public void setLandlordId(UUID landlordId) {
+        this.landlordId = landlordId;
+    }
+
+    public String getLandlordName() {
+        return landlordName;
+    }
+
+    public void setLandlordName(String landlordName) {
+        this.landlordName = landlordName;
+    }
+
+    public String getLandlordEmail() {
+        return landlordEmail;
+    }
+
+    public void setLandlordEmail(String landlordEmail) {
+        this.landlordEmail = landlordEmail;
+    }
+
+    public String getLandlordPhone() {
+        return landlordPhone;
+    }
+
+    public void setLandlordPhone(String landlordPhone) {
+        this.landlordPhone = landlordPhone;
     }
 }
