@@ -48,6 +48,7 @@ data/
 *.trace.db
 
 # Environment-specific configuration
+application.properties
 application-local.properties
 application-prod.properties
 application-staging.properties

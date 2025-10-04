@@ -28,7 +28,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/maintenance")
+@RequestMapping("/api/v1/maintenance")
 public class MaintenanceController {
 
     @Autowired

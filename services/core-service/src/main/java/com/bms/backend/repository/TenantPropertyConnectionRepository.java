@@ -32,4 +32,6 @@ public interface TenantPropertyConnectionRepository extends JpaRepository<Tenant
     boolean existsByTenantAndPropertyNameAndIsActive(User tenant, String propertyName, Boolean isActive);
 
     List<TenantPropertyConnection> findByTenantAndManagerAndIsActive(User tenant, User manager, Boolean isActive);
+
+    List<TenantPropertyConnection> findByApartment(com.bms.backend.entity.Apartment apartment);
 }

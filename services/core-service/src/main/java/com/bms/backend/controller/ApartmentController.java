@@ -18,7 +18,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/apartments")
+@RequestMapping("/api/v1/apartments")
 public class ApartmentController {
 
     @Autowired
@@ -198,6 +198,22 @@ public class ApartmentController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, null, "Failed to remove tenant: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/upload-images")
+    public ResponseEntity<ApiResponse<Apartment>> uploadApartmentImages(
+            @PathVariable UUID id,
+            @RequestParam("images") List<org.springframework.web.multipart.MultipartFile> images) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+
+            Apartment apartment = apartmentService.uploadApartmentImages(id, images, user);
+            return ResponseEntity.ok(new ApiResponse<>(true, apartment, "Apartment images uploaded successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, null, "Failed to upload images: " + e.getMessage()));
         }
     }
 }

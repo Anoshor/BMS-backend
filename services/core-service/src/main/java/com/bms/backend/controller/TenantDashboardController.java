@@ -20,7 +20,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/tenant/dashboard")
+@RequestMapping("/api/v1/tenant/dashboard")
 @PreAuthorize("hasRole('TENANT')")
 public class TenantDashboardController {
 

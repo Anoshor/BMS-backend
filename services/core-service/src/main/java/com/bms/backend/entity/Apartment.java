@@ -64,16 +64,22 @@ public class Apartment {
     
     @Column(name = "tenant_name")
     private String tenantName;
-    
+
     @Column(name = "tenant_email")
     private String tenantEmail;
-    
+
     @Column(name = "tenant_phone")
     private String tenantPhone;
+
+    @Transient
+    private UUID tenantId;
     
+    @Column(name = "images", columnDefinition = "TEXT")
+    private String images; // JSON string for image URLs: ["https://cdn.../image1.jpg", "https://cdn.../image2.jpg"]
+
     @Column(name = "documents", columnDefinition = "TEXT")
     private String documents; // JSON string for document URLs/metadata: [{"name":"lease.pdf","url":"s3://...","type":"lease"}]
-    
+
     @OneToMany(mappedBy = "apartment", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<ApartmentDocument> apartmentDocuments;
@@ -232,6 +238,22 @@ public class Apartment {
 
     public void setTenantPhone(String tenantPhone) {
         this.tenantPhone = tenantPhone;
+    }
+
+    public UUID getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(UUID tenantId) {
+        this.tenantId = tenantId;
+    }
+
+    public String getImages() {
+        return images;
+    }
+
+    public void setImages(String images) {
+        this.images = images;
     }
 
     public String getDocuments() {

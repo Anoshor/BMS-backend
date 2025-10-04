@@ -16,7 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/auth/tenant")
+@RequestMapping("/api/v1/auth/tenant")
 @CrossOrigin(origins = "*")
 public class TenantAuthController {
     
