@@ -28,7 +28,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/tenants")
+@RequestMapping("/api/v1/tenants")
 @CrossOrigin(origins = "*")
 public class TenantController {
 

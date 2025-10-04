@@ -18,7 +18,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/properties")
+@RequestMapping("/api/v1/properties")
 public class PropertyBuildingController {
 
     @Autowired

@@ -53,7 +53,13 @@ public class PropertyBuilding {
     @OneToMany(mappedBy = "property", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<PropertyImage> images;
-    
+
+    @Transient
+    private Long vacantUnits;
+
+    @Transient
+    private Long occupiedUnits;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
@@ -176,5 +182,21 @@ public class PropertyBuilding {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Long getVacantUnits() {
+        return vacantUnits;
+    }
+
+    public void setVacantUnits(Long vacantUnits) {
+        this.vacantUnits = vacantUnits;
+    }
+
+    public Long getOccupiedUnits() {
+        return occupiedUnits;
+    }
+
+    public void setOccupiedUnits(Long occupiedUnits) {
+        this.occupiedUnits = occupiedUnits;
     }
 }

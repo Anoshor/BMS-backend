@@ -16,6 +16,7 @@ public class TenantDetailsDto {
     private String lastName;
     private String email;
     private String phone;
+    private String photo;
     private String accountStatus;
     private Instant createdAt;
 
@@ -356,6 +357,14 @@ public class TenantDetailsDto {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getPhoto() {
+        return photo;
+    }
+
+    public void setPhoto(String photo) {
+        this.photo = photo;
     }
 
     public String getAccountStatus() {

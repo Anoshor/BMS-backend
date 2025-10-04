@@ -27,6 +27,11 @@ public class TenantPropertyConnection {
     @JsonIgnore
     private User manager;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "apartment_id")
+    @JsonIgnore
+    private Apartment apartment;
+
     @Column(name = "property_name", nullable = false)
     private String propertyName;
 
@@ -95,6 +100,14 @@ public class TenantPropertyConnection {
 
     public void setManager(User manager) {
         this.manager = manager;
+    }
+
+    public Apartment getApartment() {
+        return apartment;
+    }
+
+    public void setApartment(Apartment apartment) {
+        this.apartment = apartment;
     }
 
     public String getPropertyName() {

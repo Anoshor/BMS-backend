@@ -26,6 +26,9 @@ public class LeaseService {
     @Autowired
     private TenantService tenantService;
 
+    @Autowired
+    private com.bms.backend.repository.ApartmentRepository apartmentRepository;
+
     public List<LeaseListingDto> getAllLeases(User user, String status, String propertyName, String tenantName) {
         validateManagerAccess(user);
 
@@ -77,6 +80,16 @@ public class LeaseService {
         // Verify manager owns this lease
         if (!connection.getManager().getId().equals(user.getId())) {
             throw new IllegalArgumentException("You don't have permission to terminate this lease");
+        }
+
+        // Update apartment to vacant and clear tenant info
+        if (connection.getApartment() != null) {
+            com.bms.backend.entity.Apartment apartment = connection.getApartment();
+            apartment.setOccupancyStatus("VACANT");
+            apartment.setTenantName(null);
+            apartment.setTenantEmail(null);
+            apartment.setTenantPhone(null);
+            apartmentRepository.save(apartment);
         }
 
         // Soft delete - set isActive to false
@@ -140,6 +153,27 @@ public class LeaseService {
                 .collect(Collectors.toList());
     }
 
+    public List<LeaseListingDto> getUpcomingExpirations(User user, int months) {
+        validateManagerAccess(user);
+
+        LocalDate now = LocalDate.now();
+        LocalDate expirationThreshold = now.plusMonths(months);
+
+        List<TenantPropertyConnection> connections = connectionRepository.findByManagerAndIsActiveOrderByCreatedAtDesc(user, true);
+
+        return connections.stream()
+                .filter(connection -> {
+                    LocalDate endDate = connection.getEndDate();
+                    // Lease is expiring if end date is between now and threshold (next N months)
+                    return endDate != null &&
+                           (endDate.isEqual(now) || endDate.isAfter(now)) &&
+                           (endDate.isEqual(expirationThreshold) || endDate.isBefore(expirationThreshold));
+                })
+                .sorted((c1, c2) -> c1.getEndDate().compareTo(c2.getEndDate())) // Sort by end date (soonest first)
+                .map(LeaseListingDto::new)
+                .collect(Collectors.toList());
+    }
+
     public TenantPropertyConnection reactivateLease(User user, UUID id) {
         validateManagerAccess(user);
 
@@ -153,6 +187,23 @@ public class LeaseService {
 
         if (connection.getIsActive()) {
             throw new IllegalArgumentException("Lease is already active");
+        }
+
+        // Update apartment to occupied and restore tenant info
+        if (connection.getApartment() != null && connection.getTenant() != null) {
+            com.bms.backend.entity.Apartment apartment = connection.getApartment();
+
+            // Check if apartment is vacant before reactivating
+            if (!"VACANT".equalsIgnoreCase(apartment.getOccupancyStatus())) {
+                throw new IllegalArgumentException("Cannot reactivate lease - apartment is not vacant");
+            }
+
+            User tenant = connection.getTenant();
+            apartment.setOccupancyStatus("OCCUPIED");
+            apartment.setTenantName(tenant.getFirstName() + " " + tenant.getLastName());
+            apartment.setTenantEmail(tenant.getEmail());
+            apartment.setTenantPhone(tenant.getPhone());
+            apartmentRepository.save(apartment);
         }
 
         // Reactivate lease

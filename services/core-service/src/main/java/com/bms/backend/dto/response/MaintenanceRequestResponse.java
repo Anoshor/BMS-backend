@@ -25,6 +25,7 @@ public class MaintenanceRequestResponse {
     private String tenantEmail;
     private UUID tenantId;
     private String tenantName;
+    private String tenantPhoto;
     private String assignedToEmail;
     private UUID assignedToId;
     private String assignedToName;
@@ -83,6 +84,7 @@ public class MaintenanceRequestResponse {
             this.tenantId = request.getTenant().getId();
             this.tenantName = request.getTenant().getFirstName() + " " + request.getTenant().getLastName();
             this.tenantEmail = request.getTenant().getEmail();
+            this.tenantPhoto = request.getTenant().getProfileImageUrl();
         }
         if (request.getAssignedTo() != null) {
             this.assignedToId = request.getAssignedTo().getId();
@@ -236,6 +238,14 @@ public class MaintenanceRequestResponse {
 
     public void setTenantName(String tenantName) {
         this.tenantName = tenantName;
+    }
+
+    public String getTenantPhoto() {
+        return tenantPhoto;
+    }
+
+    public void setTenantPhoto(String tenantPhoto) {
+        this.tenantPhoto = tenantPhoto;
     }
 
     public String getAssignedToEmail() {

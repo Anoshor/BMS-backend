@@ -23,6 +23,15 @@ public class ApartmentService {
     @Autowired
     private PropertyBuildingRepository propertyBuildingRepository;
 
+    @Autowired
+    private com.bms.backend.repository.UserRepository userRepository;
+
+    @Autowired
+    private com.bms.backend.repository.TenantPropertyConnectionRepository connectionRepository;
+
+    @Autowired
+    private S3Service s3Service;
+
     public Apartment createApartment(ApartmentRequest request, User manager) {
         Optional<PropertyBuilding> property = propertyBuildingRepository.findById(request.getPropertyId());
         
@@ -102,7 +111,18 @@ public class ApartmentService {
     }
 
     public Optional<Apartment> getApartmentById(UUID id) {
-        return apartmentRepository.findById(id);
+        Optional<Apartment> apartmentOpt = apartmentRepository.findById(id);
+
+        if (apartmentOpt.isPresent()) {
+            Apartment apartment = apartmentOpt.get();
+            // Populate tenantId if tenant email exists
+            if (apartment.getTenantEmail() != null && !apartment.getTenantEmail().trim().isEmpty()) {
+                userRepository.findByEmail(apartment.getTenantEmail())
+                    .ifPresent(tenant -> apartment.setTenantId(tenant.getId()));
+            }
+        }
+
+        return apartmentOpt;
     }
 
     public Apartment updateApartment(UUID id, ApartmentRequest request, User manager) {
@@ -129,9 +149,19 @@ public class ApartmentService {
         apartment.setOccupancyStatus(normalizeString(request.getOccupancyStatus()));
         apartment.setUtilityMeterNumbers(request.getUtilityMeterNumbers());
         apartment.setDocuments(request.getDocuments());
-        apartment.setTenantName(request.getTenantName());
-        apartment.setTenantEmail(request.getTenantEmail());
-        apartment.setTenantPhone(request.getTenantPhone());
+
+        // IMPORTANT: Only update tenant fields if they are provided in the request
+        // This preserves existing tenant connections during unit updates
+        if (request.getTenantName() != null) {
+            apartment.setTenantName(request.getTenantName());
+        }
+        if (request.getTenantEmail() != null) {
+            apartment.setTenantEmail(request.getTenantEmail());
+        }
+        if (request.getTenantPhone() != null) {
+            apartment.setTenantPhone(request.getTenantPhone());
+        }
+
         apartment.setUpdatedAt(Instant.now());
 
         return apartmentRepository.save(apartment);
@@ -139,13 +169,24 @@ public class ApartmentService {
 
     public void deleteApartment(UUID id, User manager) {
         Optional<Apartment> apartment = apartmentRepository.findById(id);
-        
-        if (apartment.isPresent() && 
-            apartment.get().getProperty().getManager().getId().equals(manager.getId())) {
-            apartmentRepository.deleteById(id);
-        } else {
+
+        if (apartment.isEmpty() ||
+            !apartment.get().getProperty().getManager().getId().equals(manager.getId())) {
             throw new RuntimeException("Apartment not found or not authorized");
         }
+
+        Apartment apt = apartment.get();
+
+        // First, delete all tenant connections for this apartment
+        List<com.bms.backend.entity.TenantPropertyConnection> connections =
+            connectionRepository.findByApartment(apt);
+
+        if (!connections.isEmpty()) {
+            connectionRepository.deleteAll(connections);
+        }
+
+        // Then delete the apartment
+        apartmentRepository.deleteById(id);
     }
 
     public Apartment assignTenant(UUID apartmentId, String tenantName, String tenantEmail, String tenantPhone, User manager) {
@@ -168,13 +209,26 @@ public class ApartmentService {
 
     public Apartment removeTenant(UUID apartmentId, User manager) {
         Optional<Apartment> existingApartment = apartmentRepository.findById(apartmentId);
-        
-        if (existingApartment.isEmpty() || 
+
+        if (existingApartment.isEmpty() ||
             !existingApartment.get().getProperty().getManager().getId().equals(manager.getId())) {
             throw new RuntimeException("Apartment not found or not authorized");
         }
 
         Apartment apartment = existingApartment.get();
+
+        // First, deactivate all tenant connections for this apartment
+        List<com.bms.backend.entity.TenantPropertyConnection> connections =
+            connectionRepository.findByApartment(apartment);
+
+        for (com.bms.backend.entity.TenantPropertyConnection connection : connections) {
+            if (connection.getIsActive()) {
+                connection.setIsActive(false);
+                connectionRepository.save(connection);
+            }
+        }
+
+        // Then clear tenant info from apartment
         apartment.setTenantName(null);
         apartment.setTenantEmail(null);
         apartment.setTenantPhone(null);
@@ -184,6 +238,35 @@ public class ApartmentService {
         return apartmentRepository.save(apartment);
     }
     
+    public Apartment uploadApartmentImages(UUID apartmentId, List<org.springframework.web.multipart.MultipartFile> images, User manager) {
+        Optional<Apartment> existingApartment = apartmentRepository.findById(apartmentId);
+
+        if (existingApartment.isEmpty() ||
+            !existingApartment.get().getProperty().getManager().getId().equals(manager.getId())) {
+            throw new RuntimeException("Apartment not found or not authorized");
+        }
+
+        Apartment apartment = existingApartment.get();
+        List<String> imageUrls = new java.util.ArrayList<>();
+
+        // Upload each image to S3
+        for (org.springframework.web.multipart.MultipartFile image : images) {
+            try {
+                String imageUrl = s3Service.uploadFile(image, manager.getId(), S3Service.FileType.APARTMENT);
+                imageUrls.add(imageUrl);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to upload image: " + e.getMessage());
+            }
+        }
+
+        // Convert image URLs to JSON array string
+        String imagesJson = new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(imageUrls).toString();
+        apartment.setImages(imagesJson);
+        apartment.setUpdatedAt(Instant.now());
+
+        return apartmentRepository.save(apartment);
+    }
+
     /**
      * Normalizes string values to uppercase for consistency
      * Handles null and empty strings gracefully

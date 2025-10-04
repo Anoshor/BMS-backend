@@ -71,17 +71,16 @@ public class TenantService {
             throw new IllegalArgumentException("Apartment is already occupied");
         }
 
-        // Check if tenant is already connected to this apartment
-        String propertyName = apartment.getProperty().getName();
-        if (connectionRepository.existsByTenantAndPropertyNameAndIsActive(tenant, propertyName, true)) {
-            throw new IllegalArgumentException("Tenant is already connected to this property");
-        }
+        // Note: We allow a tenant to have multiple units in the same property
+        // The validation above ensures each specific apartment/unit can only have one tenant
 
         // Create connection
+        String propertyName = apartment.getProperty().getName();
         TenantPropertyConnection connection = new TenantPropertyConnection(
                 tenant, manager, propertyName,
                 request.getStartDate(), request.getEndDate(), request.getMonthlyRent()
         );
+        connection.setApartment(apartment);  // Link to specific apartment
         connection.setSecurityDeposit(request.getSecurityDeposit());
         connection.setPaymentFrequency(request.getPaymentFrequency());
         connection.setNotes(request.getNotes());
@@ -126,20 +125,34 @@ public class TenantService {
         return connections.stream()
                 .map(connection -> {
                     TenantPropertyDto dto = new TenantPropertyDto(connection);
-                    
-                    // Find apartment details based on tenant email and property name
-                    List<Apartment> apartments = apartmentRepository.findByTenantEmail(tenant.getEmail());
-                    for (Apartment apartment : apartments) {
-                        if (apartment.getProperty().getName().equals(connection.getPropertyName())) {
+
+                    // Get apartment details directly from the connection
+                    if (connection.getApartment() != null) {
+                        Apartment apartment = connection.getApartment();
+                        dto.setApartmentId(apartment.getId());
+                        dto.setUnitId(apartment.getUnitNumber());
+                        dto.setUnitNumber(apartment.getUnitNumber());
+
+                        if (apartment.getProperty() != null) {
                             dto.setPropertyId(apartment.getProperty().getId());
-                            dto.setApartmentId(apartment.getId());
-                            dto.setUnitId(apartment.getUnitNumber()); // Unit identifier (A101, B205, etc.)
-                            dto.setUnitNumber(apartment.getUnitNumber());
                             dto.setPropertyAddress(apartment.getProperty().getAddress());
-                            break;
+                        }
+                    } else {
+                        // Fallback for old connections without apartment reference
+                        // Find apartment details based on tenant email and property name
+                        List<Apartment> apartments = apartmentRepository.findByTenantEmail(tenant.getEmail());
+                        for (Apartment apartment : apartments) {
+                            if (apartment.getProperty().getName().equals(connection.getPropertyName())) {
+                                dto.setPropertyId(apartment.getProperty().getId());
+                                dto.setApartmentId(apartment.getId());
+                                dto.setUnitId(apartment.getUnitNumber());
+                                dto.setUnitNumber(apartment.getUnitNumber());
+                                dto.setPropertyAddress(apartment.getProperty().getAddress());
+                                break;
+                            }
                         }
                     }
-                    
+
                     return dto;
                 })
                 .toList();
@@ -174,21 +187,37 @@ public class TenantService {
         return connections.stream()
                 .map(connection -> {
                     TenantConnectionDto dto = new TenantConnectionDto(connection);
-                    
-                    // Find apartment and property IDs based on tenant email and property name
-                    if (connection.getTenant() != null) {
-                        List<Apartment> apartments = apartmentRepository.findByTenantEmail(connection.getTenant().getEmail());
-                        for (Apartment apartment : apartments) {
-                            if (apartment.getProperty().getName().equals(connection.getPropertyName())) {
-                                dto.setApartmentId(apartment.getId());
-                                dto.setPropertyId(apartment.getProperty().getId());
-                                dto.setPropertyAddress(apartment.getProperty().getAddress());
-                                dto.setUnitName(apartment.getUnitNumber());
-                                break;
+
+                    // Get apartment details directly from the connection
+                    if (connection.getApartment() != null) {
+                        Apartment apartment = connection.getApartment();
+                        dto.setApartmentId(apartment.getId());
+                        dto.setUnitName(apartment.getUnitNumber());
+
+                        if (apartment.getProperty() != null) {
+                            dto.setPropertyId(apartment.getProperty().getId());
+                            dto.setPropertyAddress(apartment.getProperty().getAddress());
+                        }
+                    } else {
+                        // Fallback for old connections without apartment reference
+                        // Find apartment based on tenant email and property name
+                        if (connection.getTenant() != null && connection.getTenant().getEmail() != null) {
+                            List<Apartment> apartments = apartmentRepository.findByTenantEmail(connection.getTenant().getEmail());
+                            for (Apartment apartment : apartments) {
+                                if (apartment.getProperty() != null &&
+                                    connection.getPropertyName() != null &&
+                                    apartment.getProperty().getName() != null &&
+                                    apartment.getProperty().getName().trim().equalsIgnoreCase(connection.getPropertyName().trim())) {
+                                    dto.setApartmentId(apartment.getId());
+                                    dto.setPropertyId(apartment.getProperty().getId());
+                                    dto.setPropertyAddress(apartment.getProperty().getAddress());
+                                    dto.setUnitName(apartment.getUnitNumber());
+                                    break;
+                                }
                             }
                         }
                     }
-                    
+
                     return dto;
                 })
                 .toList();
@@ -376,6 +405,7 @@ public class TenantService {
         dto.setTenantName(tenant.getFirstName() + " " + tenant.getLastName());
         dto.setEmail(tenant.getEmail());
         dto.setPhone(tenant.getPhone());
+        dto.setPhoto(tenant.getProfileImageUrl());
         dto.setAccountStatus(tenant.getAccountStatus() != null ? tenant.getAccountStatus().name() : "UNKNOWN");
         dto.setCreatedAt(tenant.getCreatedAt());
 
@@ -408,34 +438,61 @@ public class TenantService {
                 propertyInfo.setManagerPhone(connectionManager.getPhone());
             }
 
-            // Find apartment details based on tenant email and property name
-            List<Apartment> apartments = apartmentRepository.findByTenantEmail(tenant.getEmail());
-            for (Apartment apartment : apartments) {
-                if (apartment.getProperty().getName().equals(connection.getPropertyName())) {
-                    PropertyBuilding property = apartment.getProperty();
+            // Get apartment details directly from the connection
+            if (connection.getApartment() != null) {
+                Apartment apartment = connection.getApartment();
+                PropertyBuilding property = apartment.getProperty();
 
-                    // Set property details
-                    propertyInfo.setPropertyId(property.getId());
-                    propertyInfo.setPropertyType(property.getPropertyType());
-                    propertyInfo.setPropertyAddress(property.getAddress());
+                // Set property details
+                propertyInfo.setPropertyId(property.getId());
+                propertyInfo.setPropertyType(property.getPropertyType());
+                propertyInfo.setPropertyAddress(property.getAddress());
 
-                    // Set apartment/unit details
-                    propertyInfo.setApartmentId(apartment.getId());
-                    propertyInfo.setUnitNumber(apartment.getUnitNumber());
-                    propertyInfo.setFloor(apartment.getFloor());
-                    propertyInfo.setBedrooms(apartment.getBedrooms());
-                    propertyInfo.setBathrooms(apartment.getBathrooms());
-                    propertyInfo.setSquareFootage(apartment.getSquareFootage());
-                    propertyInfo.setOccupancyStatus(apartment.getOccupancyStatus());
-                    propertyInfo.setFurnished(apartment.getFurnished());
-                    propertyInfo.setMaintenanceCharges(apartment.getMaintenanceCharges());
-                    propertyInfo.setUtilityMeterNumbers(apartment.getUtilityMeterNumbers());
+                // Set apartment/unit details
+                propertyInfo.setApartmentId(apartment.getId());
+                propertyInfo.setUnitNumber(apartment.getUnitNumber());
+                propertyInfo.setFloor(apartment.getFloor());
+                propertyInfo.setBedrooms(apartment.getBedrooms());
+                propertyInfo.setBathrooms(apartment.getBathrooms());
+                propertyInfo.setSquareFootage(apartment.getSquareFootage());
+                propertyInfo.setOccupancyStatus(apartment.getOccupancyStatus());
+                propertyInfo.setFurnished(apartment.getFurnished());
+                propertyInfo.setMaintenanceCharges(apartment.getMaintenanceCharges());
+                propertyInfo.setUtilityMeterNumbers(apartment.getUtilityMeterNumbers());
 
-                    // Set additional flags
-                    propertyInfo.setHasMaintenanceRequests(hasMaintenanceRequests(apartment.getId(), tenant.getId()));
-                    propertyInfo.setHasDocuments(hasDocuments(apartment));
+                // Set additional flags
+                propertyInfo.setHasMaintenanceRequests(hasMaintenanceRequests(apartment.getId(), tenant.getId()));
+                propertyInfo.setHasDocuments(hasDocuments(apartment));
+            } else {
+                // Fallback for old connections without apartment reference
+                List<Apartment> apartments = apartmentRepository.findByTenantEmail(tenant.getEmail());
+                for (Apartment apartment : apartments) {
+                    if (apartment.getProperty().getName().equals(connection.getPropertyName())) {
+                        PropertyBuilding property = apartment.getProperty();
 
-                    break;
+                        // Set property details
+                        propertyInfo.setPropertyId(property.getId());
+                        propertyInfo.setPropertyType(property.getPropertyType());
+                        propertyInfo.setPropertyAddress(property.getAddress());
+
+                        // Set apartment/unit details
+                        propertyInfo.setApartmentId(apartment.getId());
+                        propertyInfo.setUnitNumber(apartment.getUnitNumber());
+                        propertyInfo.setFloor(apartment.getFloor());
+                        propertyInfo.setBedrooms(apartment.getBedrooms());
+                        propertyInfo.setBathrooms(apartment.getBathrooms());
+                        propertyInfo.setSquareFootage(apartment.getSquareFootage());
+                        propertyInfo.setOccupancyStatus(apartment.getOccupancyStatus());
+                        propertyInfo.setFurnished(apartment.getFurnished());
+                        propertyInfo.setMaintenanceCharges(apartment.getMaintenanceCharges());
+                        propertyInfo.setUtilityMeterNumbers(apartment.getUtilityMeterNumbers());
+
+                        // Set additional flags
+                        propertyInfo.setHasMaintenanceRequests(hasMaintenanceRequests(apartment.getId(), tenant.getId()));
+                        propertyInfo.setHasDocuments(hasDocuments(apartment));
+
+                        break;
+                    }
                 }
             }
 

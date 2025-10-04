@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/leases")
+@RequestMapping("/api/v1/leases")
 @CrossOrigin(origins = "*")
 public class LeaseController {
 
@@ -159,6 +159,22 @@ public class LeaseController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, null, "Failed to retrieve upcoming leases: " + e.getMessage()));
+        }
+    }
+
+    // Get upcoming lease expirations (expiring in next 3 months)
+    @GetMapping("/expiring-soon")
+    public ResponseEntity<ApiResponse<List<LeaseListingDto>>> getUpcomingExpirations(
+            @RequestParam(defaultValue = "3") int months) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+
+            List<LeaseListingDto> leases = leaseService.getUpcomingExpirations(user, months);
+            return ResponseEntity.ok(new ApiResponse<>(true, leases, "Upcoming lease expirations retrieved successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, null, "Failed to retrieve upcoming expirations: " + e.getMessage()));
         }
     }
 

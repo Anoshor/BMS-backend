@@ -48,6 +48,7 @@ public class S3Service {
         PROFILE("profile"),
         MAINTENANCE("maintenance"),
         PROPERTY("property"),
+        APARTMENT("apartments"),
         DOCUMENT("documents"),
         OTHER("other");
 

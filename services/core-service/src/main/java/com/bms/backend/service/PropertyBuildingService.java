@@ -19,6 +19,9 @@ PropertyBuildingService {
     @Autowired
     private PropertyBuildingRepository propertyBuildingRepository;
 
+    @Autowired
+    private com.bms.backend.repository.ApartmentRepository apartmentRepository;
+
     public PropertyBuilding createProperty(PropertyBuildingRequest request, User manager) {
         PropertyBuilding property = new PropertyBuilding();
         property.setName(request.getName());
@@ -53,7 +56,23 @@ PropertyBuildingService {
     }
 
     public Optional<PropertyBuilding> getPropertyById(UUID id) {
-        return propertyBuildingRepository.findById(id);
+        Optional<PropertyBuilding> property = propertyBuildingRepository.findById(id);
+
+        if (property.isPresent()) {
+            PropertyBuilding pb = property.get();
+            // Count vacant and occupied units for this property
+            long vacantCount = apartmentRepository.findByProperty(pb).stream()
+                .filter(apt -> "vacant".equalsIgnoreCase(apt.getOccupancyStatus()))
+                .count();
+            long occupiedCount = apartmentRepository.findByProperty(pb).stream()
+                .filter(apt -> "occupied".equalsIgnoreCase(apt.getOccupancyStatus()))
+                .count();
+
+            pb.setVacantUnits(vacantCount);
+            pb.setOccupiedUnits(occupiedCount);
+        }
+
+        return property;
     }
 
     public PropertyBuilding updateProperty(UUID id, PropertyBuildingRequest request, User manager) {
