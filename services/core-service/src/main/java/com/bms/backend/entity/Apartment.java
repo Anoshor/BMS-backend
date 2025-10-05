@@ -73,7 +73,10 @@ public class Apartment {
 
     @Transient
     private UUID tenantId;
-    
+
+    @Transient
+    private UUID connectionId;
+
     @Column(name = "images", columnDefinition = "TEXT")
     private String images; // JSON string for image URLs: ["https://cdn.../image1.jpg", "https://cdn.../image2.jpg"]
 
@@ -246,6 +249,14 @@ public class Apartment {
 
     public void setTenantId(UUID tenantId) {
         this.tenantId = tenantId;
+    }
+
+    public UUID getConnectionId() {
+        return connectionId;
+    }
+
+    public void setConnectionId(UUID connectionId) {
+        this.connectionId = connectionId;
     }
 
     public String getImages() {

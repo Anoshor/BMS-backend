@@ -451,12 +451,15 @@ public class TenantService {
                 // Set apartment/unit details
                 propertyInfo.setApartmentId(apartment.getId());
                 propertyInfo.setUnitNumber(apartment.getUnitNumber());
+                propertyInfo.setUnitType(apartment.getUnitType());
                 propertyInfo.setFloor(apartment.getFloor());
                 propertyInfo.setBedrooms(apartment.getBedrooms());
                 propertyInfo.setBathrooms(apartment.getBathrooms());
                 propertyInfo.setSquareFootage(apartment.getSquareFootage());
                 propertyInfo.setOccupancyStatus(apartment.getOccupancyStatus());
                 propertyInfo.setFurnished(apartment.getFurnished());
+                propertyInfo.setBalcony(apartment.getBalcony());
+                propertyInfo.setImages(apartment.getImages());
                 propertyInfo.setMaintenanceCharges(apartment.getMaintenanceCharges());
                 propertyInfo.setUtilityMeterNumbers(apartment.getUtilityMeterNumbers());
 
@@ -478,12 +481,15 @@ public class TenantService {
                         // Set apartment/unit details
                         propertyInfo.setApartmentId(apartment.getId());
                         propertyInfo.setUnitNumber(apartment.getUnitNumber());
+                        propertyInfo.setUnitType(apartment.getUnitType());
                         propertyInfo.setFloor(apartment.getFloor());
                         propertyInfo.setBedrooms(apartment.getBedrooms());
                         propertyInfo.setBathrooms(apartment.getBathrooms());
                         propertyInfo.setSquareFootage(apartment.getSquareFootage());
                         propertyInfo.setOccupancyStatus(apartment.getOccupancyStatus());
                         propertyInfo.setFurnished(apartment.getFurnished());
+                        propertyInfo.setBalcony(apartment.getBalcony());
+                        propertyInfo.setImages(apartment.getImages());
                         propertyInfo.setMaintenanceCharges(apartment.getMaintenanceCharges());
                         propertyInfo.setUtilityMeterNumbers(apartment.getUtilityMeterNumbers());
 

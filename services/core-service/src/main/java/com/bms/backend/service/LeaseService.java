@@ -156,18 +156,27 @@ public class LeaseService {
     public List<LeaseListingDto> getUpcomingExpirations(User user, int months) {
         validateManagerAccess(user);
 
-        LocalDate now = LocalDate.now();
-        LocalDate expirationThreshold = now.plusMonths(months);
+        // Get current date at start of day for consistent comparison
+        LocalDate today = LocalDate.now();
+        LocalDate expirationThreshold = today.plusMonths(months);
 
+        // Get all active leases for this manager
         List<TenantPropertyConnection> connections = connectionRepository.findByManagerAndIsActiveOrderByCreatedAtDesc(user, true);
 
         return connections.stream()
                 .filter(connection -> {
                     LocalDate endDate = connection.getEndDate();
-                    // Lease is expiring if end date is between now and threshold (next N months)
-                    return endDate != null &&
-                           (endDate.isEqual(now) || endDate.isAfter(now)) &&
-                           (endDate.isEqual(expirationThreshold) || endDate.isBefore(expirationThreshold));
+                    if (endDate == null) {
+                        return false;
+                    }
+
+                    // Lease is expiring if end date is:
+                    // 1. Today or in the future (not already expired)
+                    // 2. Within the next N months (on or before threshold)
+                    boolean isNotExpired = endDate.isEqual(today) || endDate.isAfter(today);
+                    boolean isWithinThreshold = endDate.isBefore(expirationThreshold) || endDate.isEqual(expirationThreshold);
+
+                    return isNotExpired && isWithinThreshold;
                 })
                 .sorted((c1, c2) -> c1.getEndDate().compareTo(c2.getEndDate())) // Sort by end date (soonest first)
                 .map(LeaseListingDto::new)

@@ -12,6 +12,12 @@ public class LeaseListingDto {
     private UUID id;
     private String leaseId;
     private String propertyName;
+    private String propertyAddress;
+    private String propertyImage;
+    private UUID propertyId;
+    private UUID apartmentId;
+    private String unitNumber;
+    private String unitType;
     private LocalDate startDate;
     private LocalDate endDate;
     private String leaseDuration;
@@ -26,6 +32,7 @@ public class LeaseListingDto {
     private String tenantName;
     private String tenantEmail;
     private String tenantPhone;
+    private String tenantPhoto;
 
     // Manager Information
     private UUID managerId;
@@ -57,12 +64,47 @@ public class LeaseListingDto {
         this.createdAt = connection.getCreatedAt();
         this.updatedAt = connection.getUpdatedAt();
 
+        // Property and Apartment information from connection
+        if (connection.getApartment() != null) {
+            com.bms.backend.entity.Apartment apartment = connection.getApartment();
+
+            // Apartment details
+            this.apartmentId = apartment.getId();
+            this.unitNumber = apartment.getUnitNumber();
+            this.unitType = apartment.getUnitType();
+
+            // Property details
+            if (apartment.getProperty() != null) {
+                this.propertyId = apartment.getProperty().getId();
+                this.propertyAddress = apartment.getProperty().getAddress();
+
+                // Get primary image or first image from property images
+                if (apartment.getProperty().getImages() != null &&
+                    !apartment.getProperty().getImages().isEmpty()) {
+                    // Try to find primary image first
+                    this.propertyImage = apartment.getProperty().getImages().stream()
+                        .filter(img -> img.getIsPrimary() != null && img.getIsPrimary())
+                        .map(img -> img.getImageUrl())
+                        .findFirst()
+                        .orElseGet(() ->
+                            // If no primary image, get first image URL
+                            apartment.getProperty().getImages().stream()
+                                .map(img -> img.getImageUrl())
+                                .filter(url -> url != null && !url.isEmpty())
+                                .findFirst()
+                                .orElse(null)
+                        );
+                }
+            }
+        }
+
         // Tenant information
         if (connection.getTenant() != null) {
             this.tenantId = connection.getTenant().getId();
             this.tenantName = connection.getTenant().getFirstName() + " " + connection.getTenant().getLastName();
             this.tenantEmail = connection.getTenant().getEmail();
             this.tenantPhone = connection.getTenant().getPhone();
+            this.tenantPhoto = connection.getTenant().getProfileImageUrl();
         }
 
         // Manager information
@@ -82,19 +124,32 @@ public class LeaseListingDto {
             return "N/A";
         }
 
-        long months = java.time.Period.between(startDate, endDate).toTotalMonths();
-        if (months == 12) {
+        // Calculate total months using Period
+        java.time.Period period = java.time.Period.between(startDate, endDate);
+        long totalMonths = period.toTotalMonths();
+
+        // Handle edge case where Period might give 0 months for valid date ranges
+        if (totalMonths <= 0 && !startDate.equals(endDate)) {
+            // Fallback: calculate months manually
+            totalMonths = java.time.temporal.ChronoUnit.MONTHS.between(startDate, endDate);
+        }
+
+        if (totalMonths == 0) {
+            // Calculate days for very short leases
+            long days = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate);
+            return days + " Day" + (days != 1 ? "s" : "");
+        } else if (totalMonths == 12) {
             return "1 Year";
-        } else if (months > 12) {
-            long years = months / 12;
-            long remainingMonths = months % 12;
+        } else if (totalMonths > 12) {
+            long years = totalMonths / 12;
+            long remainingMonths = totalMonths % 12;
             if (remainingMonths == 0) {
                 return years + " Year" + (years > 1 ? "s" : "");
             } else {
                 return years + " Year" + (years > 1 ? "s" : "") + " " + remainingMonths + " Month" + (remainingMonths > 1 ? "s" : "");
             }
         } else {
-            return months + " Month" + (months > 1 ? "s" : "");
+            return totalMonths + " Month" + (totalMonths != 1 ? "s" : "");
         }
     }
 
@@ -139,6 +194,54 @@ public class LeaseListingDto {
 
     public void setPropertyName(String propertyName) {
         this.propertyName = propertyName;
+    }
+
+    public String getPropertyAddress() {
+        return propertyAddress;
+    }
+
+    public void setPropertyAddress(String propertyAddress) {
+        this.propertyAddress = propertyAddress;
+    }
+
+    public String getPropertyImage() {
+        return propertyImage;
+    }
+
+    public void setPropertyImage(String propertyImage) {
+        this.propertyImage = propertyImage;
+    }
+
+    public UUID getPropertyId() {
+        return propertyId;
+    }
+
+    public void setPropertyId(UUID propertyId) {
+        this.propertyId = propertyId;
+    }
+
+    public UUID getApartmentId() {
+        return apartmentId;
+    }
+
+    public void setApartmentId(UUID apartmentId) {
+        this.apartmentId = apartmentId;
+    }
+
+    public String getUnitNumber() {
+        return unitNumber;
+    }
+
+    public void setUnitNumber(String unitNumber) {
+        this.unitNumber = unitNumber;
+    }
+
+    public String getUnitType() {
+        return unitType;
+    }
+
+    public void setUnitType(String unitType) {
+        this.unitType = unitType;
     }
 
     public LocalDate getStartDate() {
@@ -235,6 +338,14 @@ public class LeaseListingDto {
 
     public void setTenantPhone(String tenantPhone) {
         this.tenantPhone = tenantPhone;
+    }
+
+    public String getTenantPhoto() {
+        return tenantPhoto;
+    }
+
+    public void setTenantPhoto(String tenantPhoto) {
+        this.tenantPhoto = tenantPhoto;
     }
 
     public UUID getManagerId() {

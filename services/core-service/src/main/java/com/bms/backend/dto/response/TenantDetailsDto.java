@@ -37,12 +37,15 @@ public class TenantDetailsDto {
         private String propertyAddress;
         private UUID apartmentId;
         private String unitNumber;
+        private String unitType;
         private Integer floor;
         private Integer bedrooms;
         private java.math.BigDecimal bathrooms;
         private Integer squareFootage;
         private String occupancyStatus;
         private String furnished;
+        private String balcony;
+        private String images;
 
         // Lease Details
         @JsonFormat(pattern = "yyyy-MM-dd")
@@ -130,6 +133,14 @@ public class TenantDetailsDto {
             this.unitNumber = unitNumber;
         }
 
+        public String getUnitType() {
+            return unitType;
+        }
+
+        public void setUnitType(String unitType) {
+            this.unitType = unitType;
+        }
+
         public Integer getFloor() {
             return floor;
         }
@@ -176,6 +187,22 @@ public class TenantDetailsDto {
 
         public void setFurnished(String furnished) {
             this.furnished = furnished;
+        }
+
+        public String getBalcony() {
+            return balcony;
+        }
+
+        public void setBalcony(String balcony) {
+            this.balcony = balcony;
+        }
+
+        public String getImages() {
+            return images;
+        }
+
+        public void setImages(String images) {
+            this.images = images;
         }
 
         public LocalDate getLeaseStartDate() {

@@ -25,12 +25,14 @@ public class PropertyBuildingController {
     private PropertyBuildingService propertyBuildingService;
 
     @PostMapping("/buildings")
-    public ResponseEntity<ApiResponse<PropertyBuilding>> createProperty(@Valid @RequestBody PropertyBuildingRequest request) {
+    public ResponseEntity<ApiResponse<PropertyBuilding>> createProperty(
+            @Valid @ModelAttribute PropertyBuildingRequest request,
+            @RequestParam(value = "images", required = false) List<org.springframework.web.multipart.MultipartFile> images) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
 
-            PropertyBuilding property = propertyBuildingService.createProperty(request, user);
+            PropertyBuilding property = propertyBuildingService.createProperty(request, user, images);
             return ResponseEntity.ok(new ApiResponse<>(true, property, "Property created successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -129,6 +131,22 @@ public class PropertyBuildingController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, null, "Failed to delete property: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/buildings/{id}/upload-images")
+    public ResponseEntity<ApiResponse<PropertyBuilding>> uploadPropertyImages(
+            @PathVariable UUID id,
+            @RequestParam("images") List<org.springframework.web.multipart.MultipartFile> images) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+
+            PropertyBuilding property = propertyBuildingService.uploadPropertyImages(id, images, user);
+            return ResponseEntity.ok(new ApiResponse<>(true, property, "Property images uploaded successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, null, "Failed to upload images: " + e.getMessage()));
         }
     }
 }

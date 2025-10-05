@@ -8,9 +8,10 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public class ApartmentRequest {
-    
+
+    @NotNull(message = "Property ID is required")
     private UUID propertyId;
-    
+
     @NotBlank(message = "Unit number is required")
     private String unitNumber;
     

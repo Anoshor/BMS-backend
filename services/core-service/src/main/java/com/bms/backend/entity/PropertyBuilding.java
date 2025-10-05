@@ -60,6 +60,9 @@ public class PropertyBuilding {
     @Transient
     private Long occupiedUnits;
 
+    @Transient
+    private String managerName;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
@@ -198,5 +201,13 @@ public class PropertyBuilding {
 
     public void setOccupiedUnits(Long occupiedUnits) {
         this.occupiedUnits = occupiedUnits;
+    }
+
+    public String getManagerName() {
+        return managerName;
+    }
+
+    public void setManagerName(String managerName) {
+        this.managerName = managerName;
     }
 }

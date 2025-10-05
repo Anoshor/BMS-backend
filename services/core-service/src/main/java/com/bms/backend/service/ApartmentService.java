@@ -59,7 +59,18 @@ public class ApartmentService {
         apartment.setRent(request.getRent());
         apartment.setSecurityDeposit(request.getSecurityDeposit());
         apartment.setMaintenanceCharges(request.getMaintenanceCharges());
-        apartment.setOccupancyStatus(normalizeString(request.getOccupancyStatus()));
+
+        // IMPORTANT: On creation, only allow VACANT or MAINTENANCE status
+        // OCCUPIED status should only be set via assignTenant method to ensure proper tenant connection
+        String occupancyStatus = normalizeString(request.getOccupancyStatus());
+        if (occupancyStatus == null || occupancyStatus.isEmpty()) {
+            apartment.setOccupancyStatus("VACANT"); // Default to VACANT
+        } else if ("MAINTENANCE".equals(occupancyStatus)) {
+            apartment.setOccupancyStatus("MAINTENANCE");
+        } else {
+            apartment.setOccupancyStatus("VACANT"); // Force VACANT for all other cases
+        }
+
         apartment.setUtilityMeterNumbers(request.getUtilityMeterNumbers());
         apartment.setDocuments(request.getDocuments());
         apartment.setTenantName(request.getTenantName());
@@ -115,11 +126,22 @@ public class ApartmentService {
 
         if (apartmentOpt.isPresent()) {
             Apartment apartment = apartmentOpt.get();
+
             // Populate tenantId if tenant email exists
             if (apartment.getTenantEmail() != null && !apartment.getTenantEmail().trim().isEmpty()) {
                 userRepository.findByEmail(apartment.getTenantEmail())
                     .ifPresent(tenant -> apartment.setTenantId(tenant.getId()));
             }
+
+            // Populate connectionId from active tenant connection
+            List<com.bms.backend.entity.TenantPropertyConnection> connections =
+                connectionRepository.findByApartment(apartment);
+
+            // Find the active connection for this apartment
+            connections.stream()
+                .filter(conn -> conn.getIsActive() != null && conn.getIsActive())
+                .findFirst()
+                .ifPresent(conn -> apartment.setConnectionId(conn.getId()));
         }
 
         return apartmentOpt;
@@ -127,13 +149,19 @@ public class ApartmentService {
 
     public Apartment updateApartment(UUID id, ApartmentRequest request, User manager) {
         Optional<Apartment> existingApartment = apartmentRepository.findById(id);
-        
-        if (existingApartment.isEmpty() || 
+
+        if (existingApartment.isEmpty() ||
             !existingApartment.get().getProperty().getManager().getId().equals(manager.getId())) {
             throw new RuntimeException("Apartment not found or not authorized");
         }
 
         Apartment apartment = existingApartment.get();
+
+        // Verify the propertyId matches the existing apartment's property
+        // (We don't allow moving apartments between properties)
+        if (!apartment.getProperty().getId().equals(request.getPropertyId())) {
+            throw new IllegalArgumentException("Cannot change property of an existing apartment");
+        }
         apartment.setUnitNumber(request.getUnitNumber());
         apartment.setUnitType(request.getUnitType());
         apartment.setFloor(request.getFloor());
@@ -146,7 +174,19 @@ public class ApartmentService {
         apartment.setRent(request.getRent());
         apartment.setSecurityDeposit(request.getSecurityDeposit());
         apartment.setMaintenanceCharges(request.getMaintenanceCharges());
-        apartment.setOccupancyStatus(normalizeString(request.getOccupancyStatus()));
+
+        // IMPORTANT: Do NOT allow manual occupancy status changes
+        // Occupancy status should only be changed via assignTenant/removeTenant methods
+        // This prevents data inconsistency between apartments and tenant connections
+        // Only allow MAINTENANCE status to be set manually for maintenance scenarios
+        if (request.getOccupancyStatus() != null) {
+            String newStatus = normalizeString(request.getOccupancyStatus());
+            if ("MAINTENANCE".equals(newStatus)) {
+                apartment.setOccupancyStatus(newStatus);
+            }
+            // Silently ignore VACANT/OCCUPIED changes - they must be done via proper endpoints
+        }
+
         apartment.setUtilityMeterNumbers(request.getUtilityMeterNumbers());
         apartment.setDocuments(request.getDocuments());
 
