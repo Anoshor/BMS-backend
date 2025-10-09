@@ -56,8 +56,8 @@ public class ApartmentService {
         // Normalize enum-like fields to uppercase for consistency
         apartment.setFurnished(normalizeString(request.getFurnished()));
         apartment.setBalcony(normalizeString(request.getBalcony()));
-        apartment.setRent(request.getRent());
-        apartment.setSecurityDeposit(request.getSecurityDeposit());
+        apartment.setBaseRent(request.getBaseRent());
+        apartment.setBaseSecurityDeposit(request.getBaseSecurityDeposit());
         apartment.setMaintenanceCharges(request.getMaintenanceCharges());
 
         // IMPORTANT: On creation, only allow VACANT or MAINTENANCE status
@@ -168,6 +168,28 @@ public class ApartmentService {
                     // If deserialization fails, leave imageUrls as null
                 }
             }
+
+            // Populate current rent/deposit from active lease (if occupied)
+            if ("OCCUPIED".equalsIgnoreCase(apartment.getOccupancyStatus())) {
+                List<com.bms.backend.entity.TenantPropertyConnection> activeConnections = connections.stream()
+                    .filter(conn -> conn.getIsActive() != null && conn.getIsActive())
+                    .collect(java.util.stream.Collectors.toList());
+
+                if (!activeConnections.isEmpty()) {
+                    com.bms.backend.entity.TenantPropertyConnection activeLease = activeConnections.get(0);
+                    apartment.setCurrentRent(
+                        activeLease.getMonthlyRent() != null
+                            ? java.math.BigDecimal.valueOf(activeLease.getMonthlyRent())
+                            : null
+                    );
+                    apartment.setCurrentSecurityDeposit(
+                        activeLease.getSecurityDeposit() != null
+                            ? java.math.BigDecimal.valueOf(activeLease.getSecurityDeposit())
+                            : null
+                    );
+                    apartment.setCurrentLeaseId(activeLease.getId());
+                }
+            }
         }
 
         return apartmentOpt;
@@ -197,8 +219,8 @@ public class ApartmentService {
         // Normalize enum-like fields to uppercase for consistency
         apartment.setFurnished(normalizeString(request.getFurnished()));
         apartment.setBalcony(normalizeString(request.getBalcony()));
-        apartment.setRent(request.getRent());
-        apartment.setSecurityDeposit(request.getSecurityDeposit());
+        apartment.setBaseRent(request.getBaseRent());
+        apartment.setBaseSecurityDeposit(request.getBaseSecurityDeposit());
         apartment.setMaintenanceCharges(request.getMaintenanceCharges());
 
         // IMPORTANT: Do NOT allow manual occupancy status changes

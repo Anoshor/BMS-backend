@@ -46,15 +46,26 @@ public class Apartment {
     
     @Column(name = "balcony")
     private String balcony; // yes, no
-    
-    @Column(name = "rent", precision = 10, scale = 2)
-    private BigDecimal rent;
-    
-    @Column(name = "security_deposit", precision = 10, scale = 2)
-    private BigDecimal securityDeposit;
-    
+
+    // Base pricing - used for vacant units and as starting point for leases
+    @Column(name = "base_rent", precision = 10, scale = 2)
+    private BigDecimal baseRent;
+
+    @Column(name = "base_security_deposit", precision = 10, scale = 2)
+    private BigDecimal baseSecurityDeposit;
+
     @Column(name = "maintenance_charges", precision = 10, scale = 2)
     private BigDecimal maintenanceCharges;
+
+    // Current pricing - DERIVED from active lease (TRANSIENT - not stored in DB)
+    @Transient
+    private BigDecimal currentRent;
+
+    @Transient
+    private BigDecimal currentSecurityDeposit;
+
+    @Transient
+    private UUID currentLeaseId;
     
     @Column(name = "occupancy_status")
     private String occupancyStatus; // vacant, occupied, maintenance
@@ -182,20 +193,44 @@ public class Apartment {
         this.balcony = balcony;
     }
 
-    public BigDecimal getRent() {
-        return rent;
+    public BigDecimal getBaseRent() {
+        return baseRent;
     }
 
-    public void setRent(BigDecimal rent) {
-        this.rent = rent;
+    public void setBaseRent(BigDecimal baseRent) {
+        this.baseRent = baseRent;
     }
 
-    public BigDecimal getSecurityDeposit() {
-        return securityDeposit;
+    public BigDecimal getBaseSecurityDeposit() {
+        return baseSecurityDeposit;
     }
 
-    public void setSecurityDeposit(BigDecimal securityDeposit) {
-        this.securityDeposit = securityDeposit;
+    public void setBaseSecurityDeposit(BigDecimal baseSecurityDeposit) {
+        this.baseSecurityDeposit = baseSecurityDeposit;
+    }
+
+    public BigDecimal getCurrentRent() {
+        return currentRent;
+    }
+
+    public void setCurrentRent(BigDecimal currentRent) {
+        this.currentRent = currentRent;
+    }
+
+    public BigDecimal getCurrentSecurityDeposit() {
+        return currentSecurityDeposit;
+    }
+
+    public void setCurrentSecurityDeposit(BigDecimal currentSecurityDeposit) {
+        this.currentSecurityDeposit = currentSecurityDeposit;
+    }
+
+    public UUID getCurrentLeaseId() {
+        return currentLeaseId;
+    }
+
+    public void setCurrentLeaseId(UUID currentLeaseId) {
+        this.currentLeaseId = currentLeaseId;
     }
 
     public BigDecimal getMaintenanceCharges() {

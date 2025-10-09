@@ -35,11 +35,12 @@ public class ApartmentRequest {
     private String furnished;
     
     private String balcony;
-    
-    private BigDecimal rent;
-    
-    private BigDecimal securityDeposit;
-    
+
+    // Base pricing - used for vacant units and as starting point for leases
+    private BigDecimal baseRent;
+
+    private BigDecimal baseSecurityDeposit;
+
     private BigDecimal maintenanceCharges;
     
     private String occupancyStatus;
@@ -133,20 +134,20 @@ public class ApartmentRequest {
         this.balcony = balcony;
     }
 
-    public BigDecimal getRent() {
-        return rent;
+    public BigDecimal getBaseRent() {
+        return baseRent;
     }
 
-    public void setRent(BigDecimal rent) {
-        this.rent = rent;
+    public void setBaseRent(BigDecimal baseRent) {
+        this.baseRent = baseRent;
     }
 
-    public BigDecimal getSecurityDeposit() {
-        return securityDeposit;
+    public BigDecimal getBaseSecurityDeposit() {
+        return baseSecurityDeposit;
     }
 
-    public void setSecurityDeposit(BigDecimal securityDeposit) {
-        this.securityDeposit = securityDeposit;
+    public void setBaseSecurityDeposit(BigDecimal baseSecurityDeposit) {
+        this.baseSecurityDeposit = baseSecurityDeposit;
     }
 
     public BigDecimal getMaintenanceCharges() {
