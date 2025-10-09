@@ -1,6 +1,7 @@
 package com.bms.backend.controller;
 
 import com.bms.backend.dto.request.ApartmentRequest;
+import com.bms.backend.dto.request.UpdateApartmentRequest;
 import com.bms.backend.dto.response.ApiResponse;
 import com.bms.backend.entity.Apartment;
 import com.bms.backend.entity.User;
@@ -142,7 +143,7 @@ public class ApartmentController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<Apartment>> updateApartment(@PathVariable UUID id, @Valid @RequestBody ApartmentRequest request) {
+    public ResponseEntity<ApiResponse<Apartment>> updateApartment(@PathVariable UUID id, @Valid @RequestBody UpdateApartmentRequest request) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();

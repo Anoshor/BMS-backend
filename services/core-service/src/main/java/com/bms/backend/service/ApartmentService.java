@@ -1,6 +1,7 @@
 package com.bms.backend.service;
 
 import com.bms.backend.dto.request.ApartmentRequest;
+import com.bms.backend.dto.request.UpdateApartmentRequest;
 import com.bms.backend.entity.Apartment;
 import com.bms.backend.entity.PropertyBuilding;
 import com.bms.backend.entity.User;
@@ -195,7 +196,7 @@ public class ApartmentService {
         return apartmentOpt;
     }
 
-    public Apartment updateApartment(UUID id, ApartmentRequest request, User manager) {
+    public Apartment updateApartment(UUID id, UpdateApartmentRequest request, User manager) {
         Optional<Apartment> existingApartment = apartmentRepository.findById(id);
 
         if (existingApartment.isEmpty() ||
@@ -205,11 +206,8 @@ public class ApartmentService {
 
         Apartment apartment = existingApartment.get();
 
-        // Verify the propertyId matches the existing apartment's property
-        // (We don't allow moving apartments between properties)
-        if (!apartment.getProperty().getId().equals(request.getPropertyId())) {
-            throw new IllegalArgumentException("Cannot change property of an existing apartment");
-        }
+        // Note: We don't allow moving apartments between properties during update
+        // The property association is fixed at creation time
         apartment.setUnitNumber(request.getUnitNumber());
         apartment.setUnitType(request.getUnitType());
         apartment.setFloor(request.getFloor());
@@ -254,17 +252,8 @@ public class ApartmentService {
             }
         }
 
-        // IMPORTANT: Only update tenant fields if they are provided in the request
-        // This preserves existing tenant connections during unit updates
-        if (request.getTenantName() != null) {
-            apartment.setTenantName(request.getTenantName());
-        }
-        if (request.getTenantEmail() != null) {
-            apartment.setTenantEmail(request.getTenantEmail());
-        }
-        if (request.getTenantPhone() != null) {
-            apartment.setTenantPhone(request.getTenantPhone());
-        }
+        // IMPORTANT: Tenant assignment should ONLY be done via assignTenant/removeTenant endpoints
+        // This prevents data inconsistency. We do NOT allow tenant changes via update endpoint.
 
         apartment.setUpdatedAt(Instant.now());
 

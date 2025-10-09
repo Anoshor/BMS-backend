@@ -1,6 +1,7 @@
 package com.bms.backend.service;
 
 import com.bms.backend.dto.request.ApartmentRequest;
+import com.bms.backend.dto.request.UpdateApartmentRequest;
 import com.bms.backend.entity.*;
 import com.bms.backend.enums.UserRole;
 import com.bms.backend.repository.*;
@@ -143,8 +144,7 @@ class ApartmentConsistencyTest {
     @DisplayName("Should update apartment baseRent without affecting active lease")
     void testUpdateApartmentBaseRentDoesNotAffectLease() {
         // Arrange
-        ApartmentRequest request = new ApartmentRequest();
-        request.setPropertyId(property.getId());
+        UpdateApartmentRequest request = new UpdateApartmentRequest();
         request.setUnitNumber("A102");
         request.setBaseRent(BigDecimal.valueOf(1600.00));  // Increased base rent
         request.setBaseSecurityDeposit(BigDecimal.valueOf(3200.00));

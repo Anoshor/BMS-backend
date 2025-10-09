@@ -114,12 +114,42 @@ PropertyBuildingService {
             property.setName(request.getName());
             property.setAddress(request.getAddress());
             property.setPropertyType(request.getPropertyType());
+            property.setResidentialType(request.getResidentialType());
             property.setTotalUnits(request.getTotalUnits());
             property.setTotalFloors(request.getTotalFloors());
             property.setYearBuilt(request.getYearBuilt());
             property.setAmenities(request.getAmenities());
             property.setUpdatedAt(Instant.now());
-            
+
+            // Handle images - if provided, update property images
+            if (request.getImages() != null) {
+                // Delete existing images first
+                List<com.bms.backend.entity.PropertyImage> existingImages =
+                    propertyImageRepository.findByProperty(property);
+                if (!existingImages.isEmpty()) {
+                    propertyImageRepository.deleteAll(existingImages);
+                }
+
+                // Add new images
+                if (!request.getImages().isEmpty()) {
+                    int displayOrder = 0;
+                    for (String imageUrl : request.getImages()) {
+                        com.bms.backend.entity.PropertyImage propertyImage = new com.bms.backend.entity.PropertyImage();
+                        propertyImage.setProperty(property);
+                        propertyImage.setImageUrl(imageUrl);
+                        propertyImage.setDisplayOrder(displayOrder);
+
+                        // Set first image as primary
+                        if (displayOrder == 0) {
+                            propertyImage.setIsPrimary(true);
+                        }
+
+                        propertyImageRepository.save(propertyImage);
+                        displayOrder++;
+                    }
+                }
+            }
+
             return propertyBuildingRepository.save(property);
         }
         
