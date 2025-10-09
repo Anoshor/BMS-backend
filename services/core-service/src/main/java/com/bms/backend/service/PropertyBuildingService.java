@@ -229,10 +229,12 @@ PropertyBuildingService {
         List<com.bms.backend.entity.TenantPropertyConnection> connections =
             connectionRepository.findByPropertyAndIsActiveOrderByCreatedAtDesc(property.get(), true);
 
-        // Convert to TenantDetailsDto - just return basic tenant info
+        // Convert to TenantDetailsDto with complete information
         return connections.stream()
             .map(connection -> {
                 com.bms.backend.dto.response.TenantDetailsDto dto = new com.bms.backend.dto.response.TenantDetailsDto();
+
+                // Basic tenant info
                 if (connection.getTenant() != null) {
                     dto.setTenantId(connection.getTenant().getId());
                     dto.setTenantName(connection.getTenant().getFirstName() + " " + connection.getTenant().getLastName());
@@ -241,7 +243,61 @@ PropertyBuildingService {
                     dto.setEmail(connection.getTenant().getEmail());
                     dto.setPhone(connection.getTenant().getPhone());
                     dto.setPhoto(connection.getTenant().getProfileImageUrl());
+                    dto.setCreatedAt(connection.getTenant().getCreatedAt());
                 }
+
+                // Lease summary info
+                dto.setTotalActiveLeases(1);
+                dto.setTotalProperties(1);
+                dto.setTotalMonthlyRent(connection.getMonthlyRent());
+
+                // Create property info list with single property
+                com.bms.backend.dto.response.TenantDetailsDto.TenantPropertyInfo propertyInfo =
+                    new com.bms.backend.dto.response.TenantDetailsDto.TenantPropertyInfo();
+
+                propertyInfo.setConnectionId(connection.getId());
+                propertyInfo.setLeaseStartDate(connection.getStartDate());
+                propertyInfo.setLeaseEndDate(connection.getEndDate());
+                propertyInfo.setMonthlyRent(connection.getMonthlyRent());
+                propertyInfo.setSecurityDeposit(connection.getSecurityDeposit());
+                propertyInfo.setIsActive(connection.getIsActive());
+
+                // Apartment info
+                if (connection.getApartment() != null) {
+                    com.bms.backend.entity.Apartment apt = connection.getApartment();
+                    propertyInfo.setApartmentId(apt.getId());
+                    propertyInfo.setUnitNumber(apt.getUnitNumber());
+                    propertyInfo.setUnitType(apt.getUnitType());
+                    propertyInfo.setFloor(apt.getFloor());
+                    propertyInfo.setBedrooms(apt.getBedrooms());
+                    propertyInfo.setBathrooms(apt.getBathrooms());
+                    propertyInfo.setSquareFootage(apt.getSquareFootage());
+                    propertyInfo.setOccupancyStatus(apt.getOccupancyStatus());
+                    propertyInfo.setFurnished(apt.getFurnished());
+                    propertyInfo.setBalcony(apt.getBalcony());
+                    propertyInfo.setImages(apt.getImages());
+                    propertyInfo.setUtilityMeterNumbers(apt.getUtilityMeterNumbers());
+                    propertyInfo.setMaintenanceCharges(apt.getMaintenanceCharges());
+
+                    // Property info from apartment
+                    if (apt.getProperty() != null) {
+                        propertyInfo.setPropertyId(apt.getProperty().getId());
+                        propertyInfo.setPropertyName(apt.getProperty().getName());
+                        propertyInfo.setPropertyType(apt.getProperty().getPropertyType());
+                        propertyInfo.setPropertyAddress(apt.getProperty().getAddress());
+                    }
+                }
+
+                // Manager info
+                if (connection.getManager() != null) {
+                    propertyInfo.setManagerId(connection.getManager().getId());
+                    propertyInfo.setManagerName(connection.getManager().getFirstName() + " " + connection.getManager().getLastName());
+                    propertyInfo.setManagerEmail(connection.getManager().getEmail());
+                    propertyInfo.setManagerPhone(connection.getManager().getPhone());
+                }
+
+                dto.setProperties(java.util.Collections.singletonList(propertyInfo));
+
                 return dto;
             })
             .collect(java.util.stream.Collectors.toList());
