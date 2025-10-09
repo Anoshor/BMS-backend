@@ -34,4 +34,8 @@ public interface TenantPropertyConnectionRepository extends JpaRepository<Tenant
     List<TenantPropertyConnection> findByTenantAndManagerAndIsActive(User tenant, User manager, Boolean isActive);
 
     List<TenantPropertyConnection> findByApartment(com.bms.backend.entity.Apartment apartment);
+
+    @Query("SELECT tpc FROM TenantPropertyConnection tpc WHERE tpc.property = :property AND tpc.isActive = :isActive ORDER BY tpc.createdAt DESC")
+    List<TenantPropertyConnection> findByPropertyAndIsActiveOrderByCreatedAtDesc(@Param("property") com.bms.backend.entity.PropertyBuilding property,
+                                                                                 @Param("isActive") Boolean isActive);
 }

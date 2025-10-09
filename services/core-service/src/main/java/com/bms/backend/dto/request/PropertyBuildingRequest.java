@@ -3,28 +3,32 @@ package com.bms.backend.dto.request;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import java.util.List;
 
 public class PropertyBuildingRequest {
-    
+
     @NotBlank(message = "Property name is required")
     private String name;
-    
+
     @NotBlank(message = "Address is required")
     private String address;
-    
+
     private String propertyType;
-    
+
     private String residentialType;
-    
+
     @Positive(message = "Total units must be positive")
     private Integer totalUnits;
-    
+
     @Positive(message = "Total floors must be positive")
     private Integer totalFloors;
-    
+
     private Integer yearBuilt;
-    
+
     private String amenities;
+
+    // Array of S3 image URLs uploaded by the UI component
+    private List<String> images;
 
     // Default constructor
     public PropertyBuildingRequest() {}
@@ -92,5 +96,13 @@ public class PropertyBuildingRequest {
 
     public void setAmenities(String amenities) {
         this.amenities = amenities;
+    }
+
+    public List<String> getImages() {
+        return images;
+    }
+
+    public void setImages(List<String> images) {
+        this.images = images;
     }
 }

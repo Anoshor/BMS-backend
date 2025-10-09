@@ -25,14 +25,12 @@ public class PropertyBuildingController {
     private PropertyBuildingService propertyBuildingService;
 
     @PostMapping("/buildings")
-    public ResponseEntity<ApiResponse<PropertyBuilding>> createProperty(
-            @Valid @ModelAttribute PropertyBuildingRequest request,
-            @RequestParam(value = "images", required = false) List<org.springframework.web.multipart.MultipartFile> images) {
+    public ResponseEntity<ApiResponse<PropertyBuilding>> createProperty(@Valid @RequestBody PropertyBuildingRequest request) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
 
-            PropertyBuilding property = propertyBuildingService.createProperty(request, user, images);
+            PropertyBuilding property = propertyBuildingService.createProperty(request, user);
             return ResponseEntity.ok(new ApiResponse<>(true, property, "Property created successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -147,6 +145,34 @@ public class PropertyBuildingController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, null, "Failed to upload images: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/buildings/{id}/tenants")
+    public ResponseEntity<ApiResponse<List<com.bms.backend.dto.response.TenantDetailsDto>>> getCurrentTenantsByProperty(@PathVariable UUID id) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+
+            List<com.bms.backend.dto.response.TenantDetailsDto> tenants = propertyBuildingService.getCurrentTenantsByProperty(id, user);
+            return ResponseEntity.ok(new ApiResponse<>(true, tenants, "Current tenants retrieved successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, null, "Failed to retrieve tenants: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/buildings/{id}/maintenance/recent")
+    public ResponseEntity<ApiResponse<List<com.bms.backend.dto.response.MaintenanceRequestResponse>>> getRecentMaintenanceByProperty(@PathVariable UUID id) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+
+            List<com.bms.backend.dto.response.MaintenanceRequestResponse> requests = propertyBuildingService.getRecentMaintenanceByProperty(id, user);
+            return ResponseEntity.ok(new ApiResponse<>(true, requests, "Recent maintenance requests retrieved successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, null, "Failed to retrieve maintenance requests: " + e.getMessage()));
         }
     }
 }

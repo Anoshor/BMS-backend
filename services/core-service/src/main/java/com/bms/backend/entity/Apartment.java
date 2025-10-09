@@ -80,6 +80,9 @@ public class Apartment {
     @Column(name = "images", columnDefinition = "TEXT")
     private String images; // JSON string for image URLs: ["https://cdn.../image1.jpg", "https://cdn.../image2.jpg"]
 
+    @Transient
+    private java.util.List<String> imageUrls; // Deserialized list of image URLs for API response
+
     @Column(name = "documents", columnDefinition = "TEXT")
     private String documents; // JSON string for document URLs/metadata: [{"name":"lease.pdf","url":"s3://...","type":"lease"}]
 
@@ -257,6 +260,14 @@ public class Apartment {
 
     public void setConnectionId(UUID connectionId) {
         this.connectionId = connectionId;
+    }
+
+    public java.util.List<String> getImageUrls() {
+        return imageUrls;
+    }
+
+    public void setImageUrls(java.util.List<String> imageUrls) {
+        this.imageUrls = imageUrls;
     }
 
     public String getImages() {

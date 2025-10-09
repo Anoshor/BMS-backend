@@ -28,7 +28,13 @@ PropertyBuildingService {
     @Autowired
     private S3Service s3Service;
 
-    public PropertyBuilding createProperty(PropertyBuildingRequest request, User manager, List<org.springframework.web.multipart.MultipartFile> images) {
+    @Autowired
+    private com.bms.backend.repository.TenantPropertyConnectionRepository connectionRepository;
+
+    @Autowired
+    private com.bms.backend.repository.MaintenanceRequestRepository maintenanceRequestRepository;
+
+    public PropertyBuilding createProperty(PropertyBuildingRequest request, User manager) {
         PropertyBuilding property = new PropertyBuilding();
         property.setName(request.getName());
         property.setAddress(request.getAddress());
@@ -45,31 +51,22 @@ PropertyBuildingService {
         // Save property first to get the ID
         PropertyBuilding savedProperty = propertyBuildingRepository.save(property);
 
-        // Upload images if provided
-        if (images != null && !images.isEmpty()) {
+        // Save image URLs if provided (already uploaded to S3 by UI)
+        if (request.getImages() != null && !request.getImages().isEmpty()) {
             int displayOrder = 0;
-            for (org.springframework.web.multipart.MultipartFile image : images) {
-                try {
-                    String imageUrl = s3Service.uploadFile(image, manager.getId(), S3Service.FileType.PROPERTY);
+            for (String imageUrl : request.getImages()) {
+                com.bms.backend.entity.PropertyImage propertyImage = new com.bms.backend.entity.PropertyImage();
+                propertyImage.setProperty(savedProperty);
+                propertyImage.setImageUrl(imageUrl);
+                propertyImage.setDisplayOrder(displayOrder);
 
-                    com.bms.backend.entity.PropertyImage propertyImage = new com.bms.backend.entity.PropertyImage();
-                    propertyImage.setProperty(savedProperty);
-                    propertyImage.setImageUrl(imageUrl);
-                    propertyImage.setImageName(image.getOriginalFilename());
-                    propertyImage.setImageType(image.getContentType());
-                    propertyImage.setImageSize(image.getSize());
-                    propertyImage.setDisplayOrder(displayOrder);
-
-                    // Set first image as primary
-                    if (displayOrder == 0) {
-                        propertyImage.setIsPrimary(true);
-                    }
-
-                    propertyImageRepository.save(propertyImage);
-                    displayOrder++;
-                } catch (Exception e) {
-                    throw new RuntimeException("Failed to upload image: " + e.getMessage());
+                // Set first image as primary
+                if (displayOrder == 0) {
+                    propertyImage.setIsPrimary(true);
                 }
+
+                propertyImageRepository.save(propertyImage);
+                displayOrder++;
             }
         }
 
@@ -77,7 +74,14 @@ PropertyBuildingService {
     }
 
     public List<PropertyBuilding> getPropertiesByManager(User manager) {
-        return propertyBuildingRepository.findByManager(manager);
+        List<PropertyBuilding> properties = propertyBuildingRepository.findByManager(manager);
+
+        // Populate transient fields for each property
+        for (PropertyBuilding property : properties) {
+            populatePropertyFields(property);
+        }
+
+        return properties;
     }
 
     public List<PropertyBuilding> searchPropertiesByManager(User manager, String searchText) {
@@ -96,22 +100,7 @@ PropertyBuildingService {
         Optional<PropertyBuilding> property = propertyBuildingRepository.findById(id);
 
         if (property.isPresent()) {
-            PropertyBuilding pb = property.get();
-            // Count vacant and occupied units for this property
-            long vacantCount = apartmentRepository.findByProperty(pb).stream()
-                .filter(apt -> "vacant".equalsIgnoreCase(apt.getOccupancyStatus()))
-                .count();
-            long occupiedCount = apartmentRepository.findByProperty(pb).stream()
-                .filter(apt -> "occupied".equalsIgnoreCase(apt.getOccupancyStatus()))
-                .count();
-
-            pb.setVacantUnits(vacantCount);
-            pb.setOccupiedUnits(occupiedCount);
-
-            // Set manager name
-            if (pb.getManager() != null) {
-                pb.setManagerName(pb.getManager().getFirstName() + " " + pb.getManager().getLastName());
-            }
+            populatePropertyFields(property.get());
         }
 
         return property;
@@ -187,5 +176,104 @@ PropertyBuildingService {
 
         property.setUpdatedAt(Instant.now());
         return propertyBuildingRepository.save(property);
+    }
+
+    /**
+     * Helper method to populate transient fields for a property
+     */
+    private void populatePropertyFields(PropertyBuilding property) {
+        // Get all apartments for this property
+        List<com.bms.backend.entity.Apartment> apartments = apartmentRepository.findByProperty(property);
+
+        // Count units by status
+        long vacantCount = apartments.stream()
+            .filter(apt -> "VACANT".equalsIgnoreCase(apt.getOccupancyStatus()))
+            .count();
+        long occupiedCount = apartments.stream()
+            .filter(apt -> "OCCUPIED".equalsIgnoreCase(apt.getOccupancyStatus()))
+            .count();
+        long maintenanceCount = apartments.stream()
+            .filter(apt -> "MAINTENANCE".equalsIgnoreCase(apt.getOccupancyStatus()))
+            .count();
+
+        property.setVacantUnits(vacantCount);
+        property.setOccupiedUnits(occupiedCount);
+        property.setUnderMaintenanceUnits(maintenanceCount);
+
+        // Set manager name
+        if (property.getManager() != null) {
+            property.setManagerName(property.getManager().getFirstName() + " " + property.getManager().getLastName());
+        }
+
+        // Get image URLs from property_images table
+        List<com.bms.backend.entity.PropertyImage> propertyImages = propertyImageRepository.findByPropertyOrderByDisplayOrderAsc(property);
+        if (propertyImages != null && !propertyImages.isEmpty()) {
+            List<String> imageUrls = propertyImages.stream()
+                .map(com.bms.backend.entity.PropertyImage::getImageUrl)
+                .collect(java.util.stream.Collectors.toList());
+            property.setImageUrls(imageUrls);
+        }
+    }
+
+    /**
+     * Get all current tenants for a property
+     */
+    public List<com.bms.backend.dto.response.TenantDetailsDto> getCurrentTenantsByProperty(UUID propertyId, User manager) {
+        // Verify property belongs to manager
+        Optional<PropertyBuilding> property = propertyBuildingRepository.findById(propertyId);
+        if (property.isEmpty() || !property.get().getManager().getId().equals(manager.getId())) {
+            throw new RuntimeException("Property not found or not authorized");
+        }
+
+        // Get all active connections for this property
+        List<com.bms.backend.entity.TenantPropertyConnection> connections =
+            connectionRepository.findByPropertyAndIsActiveOrderByCreatedAtDesc(property.get(), true);
+
+        // Convert to TenantDetailsDto - just return basic tenant info
+        return connections.stream()
+            .map(connection -> {
+                com.bms.backend.dto.response.TenantDetailsDto dto = new com.bms.backend.dto.response.TenantDetailsDto();
+                if (connection.getTenant() != null) {
+                    dto.setTenantId(connection.getTenant().getId());
+                    dto.setTenantName(connection.getTenant().getFirstName() + " " + connection.getTenant().getLastName());
+                    dto.setFirstName(connection.getTenant().getFirstName());
+                    dto.setLastName(connection.getTenant().getLastName());
+                    dto.setEmail(connection.getTenant().getEmail());
+                    dto.setPhone(connection.getTenant().getPhone());
+                    dto.setPhoto(connection.getTenant().getProfileImageUrl());
+                }
+                return dto;
+            })
+            .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Get recent maintenance requests for a property
+     */
+    public List<com.bms.backend.dto.response.MaintenanceRequestResponse> getRecentMaintenanceByProperty(UUID propertyId, User manager) {
+        // Verify property belongs to manager
+        Optional<PropertyBuilding> property = propertyBuildingRepository.findById(propertyId);
+        if (property.isEmpty() || !property.get().getManager().getId().equals(manager.getId())) {
+            throw new RuntimeException("Property not found or not authorized");
+        }
+
+        // Get all apartments for this property
+        List<com.bms.backend.entity.Apartment> apartments = apartmentRepository.findByProperty(property.get());
+        if (apartments.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        // Get maintenance requests for all apartments in this property
+        List<com.bms.backend.entity.MaintenanceRequest> requests = new java.util.ArrayList<>();
+        for (com.bms.backend.entity.Apartment apartment : apartments) {
+            requests.addAll(maintenanceRequestRepository.findByApartment(apartment));
+        }
+
+        // Sort by created date descending and limit to 10 most recent
+        return requests.stream()
+            .sorted((r1, r2) -> r2.getCreatedAt().compareTo(r1.getCreatedAt()))
+            .limit(10)
+            .map(com.bms.backend.dto.response.MaintenanceRequestResponse::new)
+            .collect(java.util.stream.Collectors.toList());
     }
 }

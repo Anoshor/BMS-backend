@@ -61,7 +61,13 @@ public class PropertyBuilding {
     private Long occupiedUnits;
 
     @Transient
+    private Long underMaintenanceUnits;
+
+    @Transient
     private String managerName;
+
+    @Transient
+    private List<String> imageUrls;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -209,5 +215,21 @@ public class PropertyBuilding {
 
     public void setManagerName(String managerName) {
         this.managerName = managerName;
+    }
+
+    public Long getUnderMaintenanceUnits() {
+        return underMaintenanceUnits;
+    }
+
+    public void setUnderMaintenanceUnits(Long underMaintenanceUnits) {
+        this.underMaintenanceUnits = underMaintenanceUnits;
+    }
+
+    public List<String> getImageUrls() {
+        return imageUrls;
+    }
+
+    public void setImageUrls(List<String> imageUrls) {
+        this.imageUrls = imageUrls;
     }
 }

@@ -73,6 +73,18 @@ public class ApartmentService {
 
         apartment.setUtilityMeterNumbers(request.getUtilityMeterNumbers());
         apartment.setDocuments(request.getDocuments());
+
+        // Handle images - convert List<String> to JSON string
+        if (request.getImages() != null && !request.getImages().isEmpty()) {
+            try {
+                String imagesJson = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .writeValueAsString(request.getImages());
+                apartment.setImages(imagesJson);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to serialize images: " + e.getMessage());
+            }
+        }
+
         apartment.setTenantName(request.getTenantName());
         apartment.setTenantEmail(request.getTenantEmail());
         apartment.setTenantPhone(request.getTenantPhone());
@@ -142,6 +154,20 @@ public class ApartmentService {
                 .filter(conn -> conn.getIsActive() != null && conn.getIsActive())
                 .findFirst()
                 .ifPresent(conn -> apartment.setConnectionId(conn.getId()));
+
+            // Deserialize images JSON string to List<String>
+            if (apartment.getImages() != null && !apartment.getImages().trim().isEmpty()) {
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    java.util.List<String> imageList = mapper.readValue(
+                        apartment.getImages(),
+                        new com.fasterxml.jackson.core.type.TypeReference<java.util.List<String>>() {}
+                    );
+                    apartment.setImageUrls(imageList);
+                } catch (Exception e) {
+                    // If deserialization fails, leave imageUrls as null
+                }
+            }
         }
 
         return apartmentOpt;
@@ -189,6 +215,22 @@ public class ApartmentService {
 
         apartment.setUtilityMeterNumbers(request.getUtilityMeterNumbers());
         apartment.setDocuments(request.getDocuments());
+
+        // Handle images - convert List<String> to JSON string
+        if (request.getImages() != null) {
+            if (request.getImages().isEmpty()) {
+                // Empty array means remove all images
+                apartment.setImages(null);
+            } else {
+                try {
+                    String imagesJson = new com.fasterxml.jackson.databind.ObjectMapper()
+                        .writeValueAsString(request.getImages());
+                    apartment.setImages(imagesJson);
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to serialize images: " + e.getMessage());
+                }
+            }
+        }
 
         // IMPORTANT: Only update tenant fields if they are provided in the request
         // This preserves existing tenant connections during unit updates

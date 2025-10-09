@@ -1,0 +1,5 @@
+com/bms/backend/dto/TenantConnectionDtoTest.class
+com/bms/backend/dto/MaintenanceDetailsResponseTest.class
+com/bms/backend/service/TenantServiceTest.class
+com/bms/backend/controller/TenantControllerTest.class
+com/bms/backend/service/S3ServiceCloudFrontTest.class

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 public class ApartmentRequest {
@@ -14,16 +15,19 @@ public class ApartmentRequest {
 
     @NotBlank(message = "Unit number is required")
     private String unitNumber;
-    
+
     private String unitType;
     
-    @Positive(message = "Floor must be positive")
+    @NotNull(message = "Floor is required")
+    @Positive(message = "Floor must be a positive number")
     private Integer floor;
-    
-    @Positive(message = "Bedrooms must be positive")
+
+    @NotNull(message = "Bedrooms is required")
+    @Positive(message = "Bedrooms must be a positive number")
     private Integer bedrooms;
-    
-    @Positive(message = "Bathrooms must be positive")
+
+    @NotNull(message = "Bathrooms is required")
+    @Positive(message = "Bathrooms must be a positive number")
     private BigDecimal bathrooms; // Support half baths like 2.5
     
     private Integer squareFootage;
@@ -43,11 +47,14 @@ public class ApartmentRequest {
     private String utilityMeterNumbers; // JSON format: {"electric":"123", "gas":"456", "water":"789"}
     
     private String documents; // JSON format: [{"name":"lease.pdf","url":"s3://...","type":"lease"}]
-    
+
+    // Array of S3 image URLs uploaded by the UI component
+    private List<String> images;
+
     private String tenantName;
-    
+
     private String tenantEmail;
-    
+
     private String tenantPhone;
 
     // Default constructor
@@ -196,5 +203,13 @@ public class ApartmentRequest {
 
     public void setTenantPhone(String tenantPhone) {
         this.tenantPhone = tenantPhone;
+    }
+
+    public List<String> getImages() {
+        return images;
+    }
+
+    public void setImages(List<String> images) {
+        this.images = images;
     }
 }
