@@ -23,7 +23,7 @@ public class MaintenanceRequestPhoto {
     @Column(name = "photo_url", nullable = true, length = 500)
     private String photoUrl;
     
-    @Column(name = "photo_data", columnDefinition = "LONGTEXT")
+    @Column(name = "photo_data", columnDefinition = "TEXT")
     private String photoData;
     
     @CreationTimestamp

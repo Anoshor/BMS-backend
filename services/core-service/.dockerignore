@@ -29,6 +29,15 @@ logs/
 *.h2.db
 *.trace.db
 
+# Environment variables and secrets
+.env
+.env.*
+*.env
+application.properties
+application-local.properties
+application-prod.properties
+application-dev.properties
+
 # Temporary files
 *.tmp
 *.temp
