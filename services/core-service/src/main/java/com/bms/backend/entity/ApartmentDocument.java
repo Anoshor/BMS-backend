@@ -30,7 +30,7 @@ public class ApartmentDocument {
     @Column(name = "document_url")
     private String documentUrl; // S3 or external storage URL
     
-    @Column(name = "document_data", columnDefinition = "LONGTEXT")
+    @Column(name = "document_data", columnDefinition = "TEXT")
     private String documentData; // Optional: base64 for testing without S3
     
     @Column(name = "mime_type")

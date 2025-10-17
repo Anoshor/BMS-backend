@@ -6,16 +6,33 @@ services:
     build:
       context: ./services/core-service
       dockerfile: Dockerfile
+    image: anoshorpaul/bms-core-service:latest
+    container_name: bms-core-service
     ports:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/bms_core
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-core:5432/bms_core
       - SPRING_DATASOURCE_USERNAME=bms_user
       - SPRING_DATASOURCE_PASSWORD=bms_password
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ACCESS_TOKEN_EXPIRATION=${JWT_ACCESS_TOKEN_EXPIRATION:-900}
+      - JWT_REFRESH_TOKEN_EXPIRATION=${JWT_REFRESH_TOKEN_EXPIRATION:-2592000}
+      - AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME}
+      - AWS_S3_REGION=${AWS_S3_REGION}
+      - AWS_S3_ACCESS_KEY=${AWS_S3_ACCESS_KEY}
+      - AWS_S3_SECRET_KEY=${AWS_S3_SECRET_KEY}
+      - AWS_S3_BASE_URL=${AWS_S3_BASE_URL}
+      - AWS_CLOUDFRONT_DOMAIN=${AWS_CLOUDFRONT_DOMAIN}
+      - AWS_CLOUDFRONT_ENABLED=${AWS_CLOUDFRONT_ENABLED:-true}
     depends_on:
-      - mysql
-      - redis
+      postgres-core:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
     networks:
       - bms-network
 
@@ -24,33 +41,63 @@ services:
     build:
       context: ./services/notification-service
       dockerfile: Dockerfile
+    image: anoshorpaul/bms-notification-service:latest
+    container_name: bms-notification-service
     ports:
       - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/bms_notifications
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-notification:5432/bms_notifications
       - SPRING_DATASOURCE_USERNAME=bms_user
       - SPRING_DATASOURCE_PASSWORD=bms_password
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
     depends_on:
-      - mysql
-      - redis
+      postgres-notification:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
     networks:
       - bms-network
 
-  # MySQL Database
-  mysql:
-    image: mysql:8.0
+  # PostgreSQL Database for Core Service
+  postgres-core:
+    image: postgres:15
     environment:
-      - MYSQL_ROOT_PASSWORD=root_password
-      - MYSQL_USER=bms_user
-      - MYSQL_PASSWORD=bms_password
+      - POSTGRES_DB=bms_core
+      - POSTGRES_USER=bms_user
+      - POSTGRES_PASSWORD=bms_password
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_core_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bms_user -d bms_core"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bms-network
+
+  # PostgreSQL Database for Notification Service
+  postgres-notification:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=bms_notifications
+      - POSTGRES_USER=bms_user
+      - POSTGRES_PASSWORD=bms_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_notification_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bms_user -d bms_notifications"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - bms-network
 
@@ -65,7 +112,8 @@ services:
       - bms-network
 
 volumes:
-  mysql_data:
+  postgres_core_data:
+  postgres_notification_data:
   redis_data:
 
 networks:

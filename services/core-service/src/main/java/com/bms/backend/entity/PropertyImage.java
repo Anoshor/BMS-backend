@@ -23,7 +23,7 @@ public class PropertyImage {
     @Column(name = "image_url")
     private String imageUrl; // URL for S3/third-party storage
     
-    @Column(name = "image_data", columnDefinition = "LONGTEXT")
+    @Column(name = "image_data", columnDefinition = "TEXT")
     private String imageData; // Optional: base64 for testing without S3
     
     @Column(name = "image_name")

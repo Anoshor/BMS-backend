@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Core Service (Local Development)
+  postgres-core:
+    image: postgres:15
+    container_name: bms-postgres-core
+    environment:
+      - POSTGRES_DB=bms_core
+      - POSTGRES_USER=bms_user
+      - POSTGRES_PASSWORD=bms_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_core_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bms_user -d bms_core"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bms-network
+
+  # PostgreSQL Database for Notification Service (Local Development)
+  postgres-notification:
+    image: postgres:15
+    container_name: bms-postgres-notification
+    environment:
+      - POSTGRES_DB=bms_notifications
+      - POSTGRES_USER=bms_user
+      - POSTGRES_PASSWORD=bms_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_notification_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bms_user -d bms_notifications"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bms-network
+
+  # Redis for caching and message queues
+  redis:
+    image: redis:7.0-alpine
+    container_name: bms-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - bms-network
+
+volumes:
+  postgres_core_data:
+  postgres_notification_data:
+  redis_data:
+
+networks:
+  bms-network:
+    driver: bridge
