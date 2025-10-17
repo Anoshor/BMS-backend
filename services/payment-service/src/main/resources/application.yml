@@ -30,6 +30,11 @@ stripe:
   webhook:
     secret: ${STRIPE_WEBHOOK_SECRET:whsec_your_webhook_secret_key}
 
+# Core Service Configuration
+core:
+  service:
+    url: ${CORE_SERVICE_URL:http://localhost:8080}
+
 # Logging
 logging:
   level:

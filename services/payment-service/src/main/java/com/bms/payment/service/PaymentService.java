@@ -1,5 +1,7 @@
 package com.bms.payment.service;
 
+import com.bms.payment.client.CoreServiceClient;
+import com.bms.payment.dto.LeasePaymentDetailsDto;
 import com.bms.payment.dto.PaymentIntentRequest;
 import com.bms.payment.dto.PaymentIntentResponse;
 import com.bms.payment.entity.Customer;
@@ -11,12 +13,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class PaymentService {
 
     private final CustomerService customerService;
+    private final CoreServiceClient coreServiceClient;
 
     @Value("${stripe.publishable.key}")
     private String publishableKey;
@@ -30,11 +35,50 @@ public class PaymentService {
 
     /**
      * Create a PaymentIntent for card payments
+     * SECURE: If leaseId is provided, amount is fetched from core-service
      */
-    public PaymentIntentResponse createCardPaymentIntent(PaymentIntentRequest request) {
+    public PaymentIntentResponse createCardPaymentIntent(PaymentIntentRequest request, String authToken) {
         try {
+            Long amount;
+            String tenantId = request.getTenantId();
+            String tenantEmail = request.getTenantEmail();
+            String tenantName = request.getTenantName();
+            String tenantPhone = request.getTenantPhone();
+            String description = request.getDescription();
+
+            // SECURITY: Fetch amount from core-service if leaseId is provided
+            if (request.getLeaseId() != null && !request.getLeaseId().isEmpty()) {
+                log.info("Fetching lease payment details for lease: {}", request.getLeaseId());
+                LeasePaymentDetailsDto leaseDetails = coreServiceClient.getLeasePaymentDetails(
+                    request.getLeaseId(),
+                    authToken
+                );
+
+                // Use server-side verified amount
+                amount = leaseDetails.getTotalPayableAmount()
+                    .multiply(BigDecimal.valueOf(100)) // Convert to cents
+                    .longValue();
+
+                // Use tenant details from lease
+                tenantId = leaseDetails.getTenantId();
+                tenantEmail = leaseDetails.getTenantEmail();
+                tenantName = leaseDetails.getTenantName();
+                tenantPhone = leaseDetails.getTenantPhone();
+                description = "Rent payment for " + leaseDetails.getPropertyName() +
+                    " - Lease " + leaseDetails.getLeaseId();
+
+                log.info("Verified amount from core-service: ${} for lease {}",
+                    leaseDetails.getTotalPayableAmount(), request.getLeaseId());
+            } else {
+                // For non-lease payments, use provided amount
+                if (request.getAmount() == null) {
+                    throw new IllegalArgumentException("Amount is required when leaseId is not provided");
+                }
+                amount = request.getAmount();
+            }
+
             PaymentIntentCreateParams.Builder paramsBuilder = PaymentIntentCreateParams.builder()
-                    .setAmount(request.getAmount())
+                    .setAmount(amount)
                     .setCurrency(request.getCurrency())
                     .setAutomaticPaymentMethods(
                             PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
@@ -44,12 +88,12 @@ public class PaymentService {
                     );
 
             // Handle tenant ID - create/get customer
-            if (request.getTenantId() != null) {
+            if (tenantId != null) {
                 Customer customer = customerService.getOrCreateCustomer(
-                        request.getTenantId(),
-                        request.getTenantEmail(),
-                        request.getTenantName(),
-                        request.getTenantPhone()
+                        tenantId,
+                        tenantEmail,
+                        tenantName,
+                        tenantPhone
                 );
                 paramsBuilder.setCustomer(customer.getStripeCustomerId());
 
@@ -60,8 +104,8 @@ public class PaymentService {
             }
 
             // Add optional parameters
-            if (request.getDescription() != null) {
-                paramsBuilder.setDescription(request.getDescription());
+            if (description != null) {
+                paramsBuilder.setDescription(description);
             }
 
             if (request.getReceiptEmail() != null) {
@@ -70,7 +114,7 @@ public class PaymentService {
 
             PaymentIntent intent = PaymentIntent.create(paramsBuilder.build());
 
-            log.info("Created card PaymentIntent: {} for amount: {}", intent.getId(), request.getAmount());
+            log.info("Created card PaymentIntent: {} for amount: ${}", intent.getId(), amount / 100.0);
 
             return PaymentIntentResponse.builder()
                     .clientSecret(intent.getClientSecret())
@@ -97,11 +141,50 @@ public class PaymentService {
 
     /**
      * Create a PaymentIntent for ACH/Bank account payments
+     * SECURE: If leaseId is provided, amount is fetched from core-service
      */
-    public PaymentIntentResponse createACHPaymentIntent(PaymentIntentRequest request) {
+    public PaymentIntentResponse createACHPaymentIntent(PaymentIntentRequest request, String authToken) {
         try {
+            Long amount;
+            String tenantId = request.getTenantId();
+            String tenantEmail = request.getTenantEmail();
+            String tenantName = request.getTenantName();
+            String tenantPhone = request.getTenantPhone();
+            String description = request.getDescription();
+
+            // SECURITY: Fetch amount from core-service if leaseId is provided
+            if (request.getLeaseId() != null && !request.getLeaseId().isEmpty()) {
+                log.info("Fetching lease payment details for lease: {}", request.getLeaseId());
+                LeasePaymentDetailsDto leaseDetails = coreServiceClient.getLeasePaymentDetails(
+                    request.getLeaseId(),
+                    authToken
+                );
+
+                // Use server-side verified amount
+                amount = leaseDetails.getTotalPayableAmount()
+                    .multiply(BigDecimal.valueOf(100)) // Convert to cents
+                    .longValue();
+
+                // Use tenant details from lease
+                tenantId = leaseDetails.getTenantId();
+                tenantEmail = leaseDetails.getTenantEmail();
+                tenantName = leaseDetails.getTenantName();
+                tenantPhone = leaseDetails.getTenantPhone();
+                description = "Rent payment for " + leaseDetails.getPropertyName() +
+                    " - Lease " + leaseDetails.getLeaseId();
+
+                log.info("Verified amount from core-service: ${} for lease {}",
+                    leaseDetails.getTotalPayableAmount(), request.getLeaseId());
+            } else {
+                // For non-lease payments, use provided amount
+                if (request.getAmount() == null) {
+                    throw new IllegalArgumentException("Amount is required when leaseId is not provided");
+                }
+                amount = request.getAmount();
+            }
+
             PaymentIntentCreateParams.Builder paramsBuilder = PaymentIntentCreateParams.builder()
-                    .setAmount(request.getAmount())
+                    .setAmount(amount)
                     .setCurrency(request.getCurrency())
                     .addPaymentMethodType("us_bank_account")
                     .setPaymentMethodOptions(
@@ -117,12 +200,12 @@ public class PaymentService {
                     );
 
             // Handle tenant ID - create/get customer
-            if (request.getTenantId() != null) {
+            if (tenantId != null) {
                 Customer customer = customerService.getOrCreateCustomer(
-                        request.getTenantId(),
-                        request.getTenantEmail(),
-                        request.getTenantName(),
-                        request.getTenantPhone()
+                        tenantId,
+                        tenantEmail,
+                        tenantName,
+                        tenantPhone
                 );
                 paramsBuilder.setCustomer(customer.getStripeCustomerId());
 
@@ -133,8 +216,8 @@ public class PaymentService {
             }
 
             // Add optional parameters
-            if (request.getDescription() != null) {
-                paramsBuilder.setDescription(request.getDescription());
+            if (description != null) {
+                paramsBuilder.setDescription(description);
             }
 
             if (request.getReceiptEmail() != null) {
@@ -143,7 +226,7 @@ public class PaymentService {
 
             PaymentIntent intent = PaymentIntent.create(paramsBuilder.build());
 
-            log.info("Created ACH PaymentIntent: {} for amount: {}", intent.getId(), request.getAmount());
+            log.info("Created ACH PaymentIntent: {} for amount: ${}", intent.getId(), amount / 100.0);
 
             return PaymentIntentResponse.builder()
                     .clientSecret(intent.getClientSecret())

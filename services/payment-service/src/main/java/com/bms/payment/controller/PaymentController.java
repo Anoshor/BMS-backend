@@ -39,26 +39,20 @@ public class PaymentController {
             description = """
                     Creates a Stripe PaymentIntent for card payments.
 
+                    **SECURE FLOW (Recommended for lease payments):**
+                    ```json
+                    {
+                      "leaseId": "04fc37d0-e819-4488-9849-4f237f9b45c1"
+                    }
+                    ```
+                    Amount is fetched server-side from core-service - client cannot tamper!
+
                     **Test Card Numbers:**
                     - Success: 4242 4242 4242 4242
                     - Decline: 4000 0000 0000 0002
                     - Requires authentication: 4000 0025 0000 3155
 
-                    **Amount:** In cents (e.g., 5000 = $50.00)
-
-                    **Minimum Test Request (with tenant):**
-                    ```json
-                    {
-                      "amount": 5000,
-                      "currency": "usd",
-                      "tenantId": "04fc37d0-e819-4488-9849-4f237f9b45c1",
-                      "tenantEmail": "tenant@example.com",
-                      "tenantName": "John Doe",
-                      "description": "Monthly rent payment"
-                    }
-                    ```
-
-                    **Simple test (without tenant):**
+                    **Manual payment (non-lease):**
                     ```json
                     {
                       "amount": 5000,
@@ -69,9 +63,11 @@ public class PaymentController {
                     """
     )
     public ResponseEntity<PaymentIntentResponse> createCardPaymentIntent(
-            @Valid @RequestBody PaymentIntentRequest request) {
-        log.info("Creating card payment intent for amount: {} {}", request.getAmount(), request.getCurrency());
-        PaymentIntentResponse response = paymentService.createCardPaymentIntent(request);
+            @Valid @RequestBody PaymentIntentRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        log.info("Creating card payment intent for lease: {} or manual amount: {}",
+            request.getLeaseId(), request.getAmount());
+        PaymentIntentResponse response = paymentService.createCardPaymentIntent(request, authHeader);
 
         if (response.getError() != null) {
             return ResponseEntity.badRequest().body(response);
@@ -86,13 +82,19 @@ public class PaymentController {
             description = """
                     Creates a Stripe PaymentIntent for ACH/bank account payments.
 
+                    **SECURE FLOW (Recommended for lease payments):**
+                    ```json
+                    {
+                      "leaseId": "04fc37d0-e819-4488-9849-4f237f9b45c1"
+                    }
+                    ```
+                    Amount is fetched server-side from core-service - client cannot tamper!
+
                     **Test Bank Account:**
                     - Routing: 110000000
                     - Account: 000123456789
 
-                    **Amount:** In cents (e.g., 5000 = $50.00)
-
-                    **Minimum Test Request:**
+                    **Manual payment (non-lease):**
                     ```json
                     {
                       "amount": 5000,
@@ -103,9 +105,11 @@ public class PaymentController {
                     """
     )
     public ResponseEntity<PaymentIntentResponse> createACHPaymentIntent(
-            @Valid @RequestBody PaymentIntentRequest request) {
-        log.info("Creating ACH payment intent for amount: {} {}", request.getAmount(), request.getCurrency());
-        PaymentIntentResponse response = paymentService.createACHPaymentIntent(request);
+            @Valid @RequestBody PaymentIntentRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        log.info("Creating ACH payment intent for lease: {} or manual amount: {}",
+            request.getLeaseId(), request.getAmount());
+        PaymentIntentResponse response = paymentService.createACHPaymentIntent(request, authHeader);
 
         if (response.getError() != null) {
             return ResponseEntity.badRequest().body(response);

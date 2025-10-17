@@ -16,14 +16,15 @@ import lombok.NoArgsConstructor;
 @Schema(description = "Payment Intent Request")
 public class PaymentIntentRequest {
 
-    @NotNull(message = "Amount is required")
+    @Schema(description = "Lease ID - when provided, amount is fetched from core-service (SECURE)", example = "04fc37d0-e819-4488-9849-4f237f9b45c1")
+    private String leaseId;
+
     @Min(value = 50, message = "Minimum amount is 50 cents")
-    @Schema(description = "Amount in cents (e.g., 5000 = $50.00)", example = "5000", required = true)
+    @Schema(description = "Amount in cents (e.g., 5000 = $50.00) - Only for non-lease payments. Ignored if leaseId is provided.", example = "5000")
     private Long amount;
 
-    @NotBlank(message = "Currency is required")
-    @Schema(description = "Currency code", example = "usd", required = true)
-    private String currency;
+    @Schema(description = "Currency code", example = "usd", defaultValue = "usd")
+    private String currency = "usd";
 
     @Schema(description = "Payment method ID (optional for initial intent creation)", example = "pm_card_visa")
     private String paymentMethodId;
