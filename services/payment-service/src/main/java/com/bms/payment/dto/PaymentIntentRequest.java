@@ -2,17 +2,7 @@ package com.bms.payment.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 @Schema(description = "Payment Intent Request")
 public class PaymentIntentRequest {
 
@@ -52,4 +42,201 @@ public class PaymentIntentRequest {
 
     @Schema(description = "Email to send receipt to (optional, uses tenantEmail if not provided)", example = "customer@example.com")
     private String receiptEmail;
+
+    // Constructors
+    public PaymentIntentRequest() {}
+
+    // Builder pattern
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private String leaseId;
+        private Long amount;
+        private String currency = "usd";
+        private String paymentMethodId;
+        private boolean savePaymentMethod;
+        private String[] paymentMethodTypes;
+        private String tenantId;
+        private String tenantName;
+        private String tenantEmail;
+        private String tenantPhone;
+        private String description;
+        private String receiptEmail;
+
+        public Builder leaseId(String leaseId) {
+            this.leaseId = leaseId;
+            return this;
+        }
+
+        public Builder amount(Long amount) {
+            this.amount = amount;
+            return this;
+        }
+
+        public Builder currency(String currency) {
+            this.currency = currency;
+            return this;
+        }
+
+        public Builder paymentMethodId(String paymentMethodId) {
+            this.paymentMethodId = paymentMethodId;
+            return this;
+        }
+
+        public Builder savePaymentMethod(boolean savePaymentMethod) {
+            this.savePaymentMethod = savePaymentMethod;
+            return this;
+        }
+
+        public Builder paymentMethodTypes(String[] paymentMethodTypes) {
+            this.paymentMethodTypes = paymentMethodTypes;
+            return this;
+        }
+
+        public Builder tenantId(String tenantId) {
+            this.tenantId = tenantId;
+            return this;
+        }
+
+        public Builder tenantName(String tenantName) {
+            this.tenantName = tenantName;
+            return this;
+        }
+
+        public Builder tenantEmail(String tenantEmail) {
+            this.tenantEmail = tenantEmail;
+            return this;
+        }
+
+        public Builder tenantPhone(String tenantPhone) {
+            this.tenantPhone = tenantPhone;
+            return this;
+        }
+
+        public Builder description(String description) {
+            this.description = description;
+            return this;
+        }
+
+        public Builder receiptEmail(String receiptEmail) {
+            this.receiptEmail = receiptEmail;
+            return this;
+        }
+
+        public PaymentIntentRequest build() {
+            PaymentIntentRequest request = new PaymentIntentRequest();
+            request.leaseId = this.leaseId;
+            request.amount = this.amount;
+            request.currency = this.currency;
+            request.paymentMethodId = this.paymentMethodId;
+            request.savePaymentMethod = this.savePaymentMethod;
+            request.paymentMethodTypes = this.paymentMethodTypes;
+            request.tenantId = this.tenantId;
+            request.tenantName = this.tenantName;
+            request.tenantEmail = this.tenantEmail;
+            request.tenantPhone = this.tenantPhone;
+            request.description = this.description;
+            request.receiptEmail = this.receiptEmail;
+            return request;
+        }
+    }
+
+    // Getters and Setters
+    public String getLeaseId() {
+        return leaseId;
+    }
+
+    public void setLeaseId(String leaseId) {
+        this.leaseId = leaseId;
+    }
+
+    public Long getAmount() {
+        return amount;
+    }
+
+    public void setAmount(Long amount) {
+        this.amount = amount;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
+
+    public String getPaymentMethodId() {
+        return paymentMethodId;
+    }
+
+    public void setPaymentMethodId(String paymentMethodId) {
+        this.paymentMethodId = paymentMethodId;
+    }
+
+    public boolean isSavePaymentMethod() {
+        return savePaymentMethod;
+    }
+
+    public void setSavePaymentMethod(boolean savePaymentMethod) {
+        this.savePaymentMethod = savePaymentMethod;
+    }
+
+    public String[] getPaymentMethodTypes() {
+        return paymentMethodTypes;
+    }
+
+    public void setPaymentMethodTypes(String[] paymentMethodTypes) {
+        this.paymentMethodTypes = paymentMethodTypes;
+    }
+
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
+    }
+
+    public String getTenantName() {
+        return tenantName;
+    }
+
+    public void setTenantName(String tenantName) {
+        this.tenantName = tenantName;
+    }
+
+    public String getTenantEmail() {
+        return tenantEmail;
+    }
+
+    public void setTenantEmail(String tenantEmail) {
+        this.tenantEmail = tenantEmail;
+    }
+
+    public String getTenantPhone() {
+        return tenantPhone;
+    }
+
+    public void setTenantPhone(String tenantPhone) {
+        this.tenantPhone = tenantPhone;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getReceiptEmail() {
+        return receiptEmail;
+    }
+
+    public void setReceiptEmail(String receiptEmail) {
+        this.receiptEmail = receiptEmail;
+    }
 }

@@ -8,23 +8,28 @@ import com.bms.payment.entity.Customer;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import com.stripe.param.PaymentIntentCreateParams;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 
 @Service
-@Slf4j
-@RequiredArgsConstructor
 public class PaymentService {
+
+    private static final Logger log = LoggerFactory.getLogger(PaymentService.class);
 
     private final CustomerService customerService;
     private final CoreServiceClient coreServiceClient;
 
     @Value("${stripe.publishable.key}")
     private String publishableKey;
+
+    public PaymentService(CustomerService customerService, CoreServiceClient coreServiceClient) {
+        this.customerService = customerService;
+        this.coreServiceClient = coreServiceClient;
+    }
 
     /**
      * Get Stripe publishable key for frontend initialization
