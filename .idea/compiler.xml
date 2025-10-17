@@ -11,6 +11,15 @@
         <module name="shared-services" />
         <module name="notification-service" />
       </profile>
+      <profile name="Annotation profile for BMS Parent" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
+        </processorPath>
+        <module name="payment-service" />
+      </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
@@ -18,6 +27,7 @@
       <module name="bms-backend" options="" />
       <module name="bms-backend (1)" options="-parameters" />
       <module name="notification-service" options="-parameters" />
+      <module name="payment-service" options="-parameters" />
       <module name="shared-services" options="-parameters" />
     </option>
   </component>

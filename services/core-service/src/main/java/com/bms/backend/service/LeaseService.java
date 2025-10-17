@@ -3,6 +3,7 @@ package com.bms.backend.service;
 import com.bms.backend.dto.request.LeaseUpdateRequest;
 import com.bms.backend.dto.response.LeaseDetailsDto;
 import com.bms.backend.dto.response.LeaseListingDto;
+import com.bms.backend.dto.response.LeasePaymentDetailsDto;
 import com.bms.backend.entity.TenantPropertyConnection;
 import com.bms.backend.entity.User;
 import com.bms.backend.enums.UserRole;
@@ -11,7 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -218,6 +221,92 @@ public class LeaseService {
         // Reactivate lease
         connection.setIsActive(true);
         return connectionRepository.save(connection);
+    }
+
+    /**
+     * Get payment details for a lease by its ID
+     * This method is accessible to both tenants and managers
+     */
+    public LeasePaymentDetailsDto getLeasePaymentDetails(User user, UUID leaseId) {
+        TenantPropertyConnection connection = connectionRepository.findById(leaseId)
+                .orElseThrow(() -> new IllegalArgumentException("Lease not found"));
+
+        // Verify user has access to this lease (either tenant or manager)
+        boolean isTenant = connection.getTenant().getId().equals(user.getId());
+        boolean isManager = connection.getManager().getId().equals(user.getId());
+
+        if (!isTenant && !isManager) {
+            throw new IllegalArgumentException("You don't have permission to view this lease");
+        }
+
+        User tenant = connection.getTenant();
+        BigDecimal rentAmount = BigDecimal.valueOf(connection.getMonthlyRent());
+
+        // Calculate late payment charges (example: 10% if payment is overdue)
+        // This is a simplified calculation - you may want to implement more complex logic
+        BigDecimal latePaymentCharges = calculateLatePaymentCharges(connection);
+
+        BigDecimal totalPayableAmount = rentAmount.add(latePaymentCharges);
+
+        // Generate formatted lease ID (e.g., LEASE-2025-6E99)
+        String formattedLeaseId = generateFormattedLeaseId(connection);
+
+        LeasePaymentDetailsDto dto = new LeasePaymentDetailsDto();
+        dto.setConnectionId(connection.getId());
+        dto.setLeaseId(formattedLeaseId);
+        dto.setTenantId(tenant.getId());
+        dto.setTenantName(tenant.getFirstName() + " " + tenant.getLastName());
+        dto.setTenantEmail(tenant.getEmail());
+        dto.setTenantPhone(tenant.getPhone());
+        dto.setPropertyName(connection.getPropertyName());
+        dto.setRentAmount(rentAmount);
+        dto.setLatePaymentCharges(latePaymentCharges);
+        dto.setTotalPayableAmount(totalPayableAmount);
+        dto.setSecurityDeposit(connection.getSecurityDeposit() != null ?
+                BigDecimal.valueOf(connection.getSecurityDeposit()) : BigDecimal.ZERO);
+        dto.setPaymentFrequency(connection.getPaymentFrequency());
+
+        return dto;
+    }
+
+    /**
+     * Calculate late payment charges based on lease terms
+     * This is a simplified implementation - customize based on your business rules
+     */
+    private BigDecimal calculateLatePaymentCharges(TenantPropertyConnection connection) {
+        // TODO: Implement actual late payment calculation logic
+        // For now, we'll calculate 10% late fee if current date is past the payment due date
+        // You should replace this with your actual business logic
+
+        LocalDate today = LocalDate.now();
+        LocalDate leaseStart = connection.getStartDate();
+
+        // Simplified logic: Calculate if payment is late (assuming payment due on 1st of each month)
+        // This is just an example - you'll want to implement proper payment tracking
+        long monthsSinceStart = ChronoUnit.MONTHS.between(leaseStart, today);
+
+        // For demo purposes, if we're past the 5th of the month, add 10% late fee
+        if (today.getDayOfMonth() > 5 && monthsSinceStart >= 0) {
+            return BigDecimal.valueOf(connection.getMonthlyRent())
+                    .multiply(BigDecimal.valueOf(0.10))
+                    .setScale(2, BigDecimal.ROUND_HALF_UP);
+        }
+
+        return BigDecimal.ZERO;
+    }
+
+    /**
+     * Generate formatted lease ID from connection
+     */
+    private String generateFormattedLeaseId(TenantPropertyConnection connection) {
+        // Extract last 4 characters of UUID
+        String uuidStr = connection.getId().toString().replace("-", "").toUpperCase();
+        String suffix = uuidStr.substring(uuidStr.length() - 4);
+
+        // Get year from start date
+        int year = connection.getStartDate().getYear();
+
+        return String.format("LEASE-%d-%s", year, suffix);
     }
 
     // Helper methods
