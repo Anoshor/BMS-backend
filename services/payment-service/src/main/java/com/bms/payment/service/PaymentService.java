@@ -183,19 +183,14 @@ public class PaymentService {
                 amount = request.getAmount();
             }
 
+            // Create payment intent with automatic payment method detection
+            // Will include all enabled payment methods (Card, ACH, etc.) from Stripe dashboard
             PaymentIntentCreateParams.Builder paramsBuilder = PaymentIntentCreateParams.builder()
                     .setAmount(amount)
                     .setCurrency(request.getCurrency())
-                    .addPaymentMethodType("us_bank_account")
-                    .setPaymentMethodOptions(
-                            PaymentIntentCreateParams.PaymentMethodOptions.builder()
-                                    .setUsBankAccount(
-                                            PaymentIntentCreateParams.PaymentMethodOptions.UsBankAccount.builder()
-                                                    .setVerificationMethod(
-                                                            PaymentIntentCreateParams.PaymentMethodOptions.UsBankAccount.VerificationMethod.INSTANT
-                                                    )
-                                                    .build()
-                                    )
+                    .setAutomaticPaymentMethods(
+                            PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
+                                    .setEnabled(true)
                                     .build()
                     );
 

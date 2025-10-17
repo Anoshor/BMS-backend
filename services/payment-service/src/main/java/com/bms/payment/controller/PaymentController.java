@@ -78,9 +78,10 @@ public class PaymentController {
 
     @PostMapping("/create-ach-intent")
     @Operation(
-            summary = "Create ACH payment intent",
+            summary = "Create payment intent (supports all payment methods)",
             description = """
-                    Creates a Stripe PaymentIntent for ACH/bank account payments.
+                    Creates a Stripe PaymentIntent with automatic payment method detection.
+                    Supports: Credit/Debit Cards, ACH (if enabled), and other methods based on your Stripe account.
 
                     **SECURE FLOW (Recommended for lease payments):**
                     ```json
@@ -90,7 +91,7 @@ public class PaymentController {
                     ```
                     Amount is fetched server-side from core-service - client cannot tamper!
 
-                    **Test Bank Account:**
+                    **Test Bank Account (if ACH is enabled):**
                     - Routing: 110000000
                     - Account: 000123456789
 
@@ -99,9 +100,11 @@ public class PaymentController {
                     {
                       "amount": 5000,
                       "currency": "usd",
-                      "description": "Test ACH payment"
+                      "description": "Test payment"
                     }
                     ```
+
+                    **Note:** ACH requires US-based Stripe account with ACH enabled in dashboard.
                     """
     )
     public ResponseEntity<PaymentIntentResponse> createACHPaymentIntent(
