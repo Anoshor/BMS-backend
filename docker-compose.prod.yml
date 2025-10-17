@@ -49,9 +49,12 @@ services:
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - CORE_SERVICE_URL=http://bms-core-service:8080
     depends_on:
       postgres-payment:
         condition: service_healthy
+      bms-core-service:
+        condition: service_started
     restart: unless-stopped
     networks:
       - bms-network

@@ -39,3 +39,4 @@ build/
 ### Logs ###
 *.log
 logs/
+services/payment-service/src/test/resources/application-test.yml
