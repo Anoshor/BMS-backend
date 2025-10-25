@@ -22,13 +22,15 @@ public class PaymentService {
 
     private final CustomerService customerService;
     private final CoreServiceClient coreServiceClient;
+    private final WebhookService webhookService;
 
     @Value("${stripe.publishable.key}")
     private String publishableKey;
 
-    public PaymentService(CustomerService customerService, CoreServiceClient coreServiceClient) {
+    public PaymentService(CustomerService customerService, CoreServiceClient coreServiceClient, WebhookService webhookService) {
         this.customerService = customerService;
         this.coreServiceClient = coreServiceClient;
+        this.webhookService = webhookService;
     }
 
     /**
@@ -44,6 +46,10 @@ public class PaymentService {
      */
     public PaymentIntentResponse createCardPaymentIntent(PaymentIntentRequest request, String authToken) {
         try {
+            log.info("=== Creating Card Payment Intent ===");
+            log.info("Request - LeaseId: {}, TenantId: {}, Amount: {}",
+                request.getLeaseId(), request.getTenantId(), request.getAmount());
+
             Long amount;
             String tenantId = request.getTenantId();
             String tenantEmail = request.getTenantEmail();
@@ -53,7 +59,7 @@ public class PaymentService {
 
             // SECURITY: Fetch amount from core-service if leaseId is provided
             if (request.getLeaseId() != null && !request.getLeaseId().isEmpty()) {
-                log.info("Fetching lease payment details for lease: {}", request.getLeaseId());
+                log.info("Fetching lease payment details from core-service for lease: {}", request.getLeaseId());
                 LeasePaymentDetailsDto leaseDetails = coreServiceClient.getLeasePaymentDetails(
                     request.getLeaseId(),
                     authToken
@@ -90,7 +96,10 @@ public class PaymentService {
                                     .setEnabled(true)
                                     .setAllowRedirects(PaymentIntentCreateParams.AutomaticPaymentMethods.AllowRedirects.NEVER)
                                     .build()
-                    );
+                    )
+                    // Add metadata for webhook processing
+                    .putMetadata("tenantId", tenantId)
+                    .putMetadata("connectionId", request.getLeaseId()); // leaseId is actually connectionId (UUID)
 
             // Handle tenant ID - create/get customer
             if (tenantId != null) {
@@ -118,8 +127,21 @@ public class PaymentService {
             }
 
             PaymentIntent intent = PaymentIntent.create(paramsBuilder.build());
+            log.info("✅ PaymentIntent created successfully - ID: {}, Amount: {}, Status: {}",
+                intent.getId(), intent.getAmount(), intent.getStatus());
+            log.info("PaymentIntent Metadata - TenantId: {}, ConnectionId: {}",
+                intent.getMetadata().get("tenantId"), intent.getMetadata().get("connectionId"));
 
-            log.info("Created card PaymentIntent: {} for amount: ${}", intent.getId(), amount / 100.0);
+            // Immediately record payment as PENDING in core-service
+            // This ensures payment history exists even if webhooks fail
+            try {
+                log.info("🔄 Attempting to record PENDING payment in core-service...");
+                webhookService.recordPaymentTransaction(intent, "PENDING");
+                log.info("✅ Successfully recorded PENDING payment transaction for PaymentIntent: {}", intent.getId());
+            } catch (Exception e) {
+                log.error("❌ Failed to record initial PENDING transaction: {}", e.getMessage(), e);
+                // Continue - webhook will retry later
+            }
 
             return PaymentIntentResponse.builder()
                     .clientSecret(intent.getClientSecret())
@@ -130,13 +152,14 @@ public class PaymentService {
                     .build();
 
         } catch (StripeException e) {
-            log.error("Error creating card PaymentIntent: {}", e.getMessage(), e);
+            log.error("❌ Stripe error creating card payment intent - Code: {}, Message: {}",
+                e.getCode(), e.getMessage(), e);
             return PaymentIntentResponse.builder()
                     .error("PAYMENT_INTENT_CREATION_FAILED")
                     .errorMessage(e.getMessage())
                     .build();
         } catch (Exception e) {
-            log.error("Error creating card PaymentIntent: {}", e.getMessage(), e);
+            log.error("Unexpected error creating card payment intent: {}", e.getMessage(), e);
             return PaymentIntentResponse.builder()
                     .error("PAYMENT_INTENT_CREATION_FAILED")
                     .errorMessage(e.getMessage())
@@ -150,6 +173,10 @@ public class PaymentService {
      */
     public PaymentIntentResponse createACHPaymentIntent(PaymentIntentRequest request, String authToken) {
         try {
+            log.info("=== Creating ACH Payment Intent ===");
+            log.info("Request - LeaseId: {}, TenantId: {}, Amount: {}",
+                request.getLeaseId(), request.getTenantId(), request.getAmount());
+
             Long amount;
             String tenantId = request.getTenantId();
             String tenantEmail = request.getTenantEmail();
@@ -159,7 +186,7 @@ public class PaymentService {
 
             // SECURITY: Fetch amount from core-service if leaseId is provided
             if (request.getLeaseId() != null && !request.getLeaseId().isEmpty()) {
-                log.info("Fetching lease payment details for lease: {}", request.getLeaseId());
+                log.info("Fetching lease payment details from core-service for lease: {}", request.getLeaseId());
                 LeasePaymentDetailsDto leaseDetails = coreServiceClient.getLeasePaymentDetails(
                     request.getLeaseId(),
                     authToken
@@ -197,7 +224,10 @@ public class PaymentService {
                             PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
                                     .setEnabled(true)
                                     .build()
-                    );
+                    )
+                    // Add metadata for webhook processing
+                    .putMetadata("tenantId", tenantId)
+                    .putMetadata("connectionId", request.getLeaseId()); // leaseId is actually connectionId (UUID)
 
             // Handle tenant ID - create/get customer
             if (tenantId != null) {
@@ -225,8 +255,21 @@ public class PaymentService {
             }
 
             PaymentIntent intent = PaymentIntent.create(paramsBuilder.build());
+            log.info("✅ PaymentIntent created successfully - ID: {}, Amount: {}, Status: {}",
+                intent.getId(), intent.getAmount(), intent.getStatus());
+            log.info("PaymentIntent Metadata - TenantId: {}, ConnectionId: {}",
+                intent.getMetadata().get("tenantId"), intent.getMetadata().get("connectionId"));
 
-            log.info("Created ACH PaymentIntent: {} for amount: ${}", intent.getId(), amount / 100.0);
+            // Immediately record payment as PENDING in core-service
+            // This ensures payment history exists even if webhooks fail
+            try {
+                log.info("🔄 Attempting to record PENDING payment in core-service...");
+                webhookService.recordPaymentTransaction(intent, "PENDING");
+                log.info("✅ Successfully recorded PENDING payment transaction for PaymentIntent: {}", intent.getId());
+            } catch (Exception e) {
+                log.error("❌ Failed to record initial PENDING transaction: {}", e.getMessage(), e);
+                // Continue - webhook will retry later
+            }
 
             return PaymentIntentResponse.builder()
                     .clientSecret(intent.getClientSecret())
@@ -237,13 +280,14 @@ public class PaymentService {
                     .build();
 
         } catch (StripeException e) {
-            log.error("Error creating ACH PaymentIntent: {}", e.getMessage(), e);
+            log.error("❌ Stripe error creating ACH payment intent - Code: {}, Message: {}",
+                e.getCode(), e.getMessage(), e);
             return PaymentIntentResponse.builder()
                     .error("PAYMENT_INTENT_CREATION_FAILED")
                     .errorMessage(e.getMessage())
                     .build();
         } catch (Exception e) {
-            log.error("Error creating ACH PaymentIntent: {}", e.getMessage(), e);
+            log.error("Unexpected error creating ACH payment intent: {}", e.getMessage(), e);
             return PaymentIntentResponse.builder()
                     .error("PAYMENT_INTENT_CREATION_FAILED")
                     .errorMessage(e.getMessage())
@@ -256,10 +300,10 @@ public class PaymentService {
      */
     public PaymentIntentResponse getPaymentIntent(String paymentIntentId) {
         try {
+            log.info("Retrieving PaymentIntent: {}", paymentIntentId);
             PaymentIntent intent = PaymentIntent.retrieve(paymentIntentId);
 
-            log.info("Retrieved PaymentIntent: {}", intent.getId());
-
+            log.info("PaymentIntent retrieved - Status: {}, Amount: {}", intent.getStatus(), intent.getAmount());
             return PaymentIntentResponse.builder()
                     .clientSecret(intent.getClientSecret())
                     .paymentIntentId(intent.getId())
@@ -269,7 +313,8 @@ public class PaymentService {
                     .build();
 
         } catch (StripeException e) {
-            log.error("Error retrieving PaymentIntent {}: {}", paymentIntentId, e.getMessage(), e);
+            log.error("Failed to retrieve PaymentIntent: {} - Code: {}, Message: {}",
+                paymentIntentId, e.getCode(), e.getMessage(), e);
             return PaymentIntentResponse.builder()
                     .error("PAYMENT_INTENT_RETRIEVAL_FAILED")
                     .errorMessage(e.getMessage())
@@ -282,11 +327,11 @@ public class PaymentService {
      */
     public PaymentIntentResponse cancelPaymentIntent(String paymentIntentId) {
         try {
+            log.info("Canceling PaymentIntent: {}", paymentIntentId);
             PaymentIntent intent = PaymentIntent.retrieve(paymentIntentId);
             PaymentIntent canceledIntent = intent.cancel();
 
-            log.info("Canceled PaymentIntent: {}", canceledIntent.getId());
-
+            log.info("PaymentIntent canceled successfully: {}", paymentIntentId);
             return PaymentIntentResponse.builder()
                     .paymentIntentId(canceledIntent.getId())
                     .status(canceledIntent.getStatus())
@@ -295,7 +340,8 @@ public class PaymentService {
                     .build();
 
         } catch (StripeException e) {
-            log.error("Error canceling PaymentIntent {}: {}", paymentIntentId, e.getMessage(), e);
+            log.error("Failed to cancel PaymentIntent: {} - Code: {}, Message: {}",
+                paymentIntentId, e.getCode(), e.getMessage(), e);
             return PaymentIntentResponse.builder()
                     .error("PAYMENT_INTENT_CANCELLATION_FAILED")
                     .errorMessage(e.getMessage())

@@ -372,6 +372,102 @@ public class UserService {
     }
     
     /**
+     * Change password for logged-in user (verifies old password)
+     * Works for all user types (TENANT, MANAGER, ADMIN)
+     */
+    public void changePassword(User user, String oldPassword, String newPassword) {
+        // Verify old password
+        if (!passwordEncoder.matches(oldPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+
+        // Validate new password
+        if (oldPassword.equals(newPassword)) {
+            throw new IllegalArgumentException("New password must be different from current password");
+        }
+
+        validatePassword(newPassword);
+
+        // Update password
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(Instant.now());
+        userRepository.save(user);
+    }
+
+    /**
+     * Initiates password reset process by sending OTP to user's email
+     * Works for all user types (TENANT, MANAGER, ADMIN)
+     * NOTE: Requires email service to be configured
+     */
+    public void initiatePasswordReset(String email) {
+        // Find user by email (case-insensitive)
+        User user = userRepository.findByEmail(email.toLowerCase().trim())
+                .orElseThrow(() -> new IllegalArgumentException("No account found with this email address"));
+
+        // Check if user's email is verified
+        if (!user.getEmailVerified()) {
+            throw new IllegalArgumentException("Email not verified. Please verify your email first.");
+        }
+
+        // Generate and send OTP for password reset
+        otpService.generateAndSendPasswordResetOtp(email);
+    }
+
+    /**
+     * Resets user password using OTP verification
+     * Works for all user types (TENANT, MANAGER, ADMIN)
+     * NOTE: Requires email service to be configured
+     */
+    public void resetPassword(String email, String otpCode, String newPassword) {
+        // Find user by email (case-insensitive)
+        User user = userRepository.findByEmail(email.toLowerCase().trim())
+                .orElseThrow(() -> new IllegalArgumentException("No account found with this email address"));
+
+        // Verify OTP
+        boolean isOtpValid = otpService.verifyPasswordResetOtp(email, otpCode);
+        if (!isOtpValid) {
+            throw new IllegalArgumentException("Invalid or expired OTP code");
+        }
+
+        // Validate new password
+        validatePassword(newPassword);
+
+        // Update password
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(Instant.now());
+        userRepository.save(user);
+    }
+
+    /**
+     * Validates password strength
+     */
+    private void validatePassword(String password) {
+        if (password == null || password.length() < 8) {
+            throw new IllegalArgumentException("Password must be at least 8 characters long");
+        }
+
+        // Check for at least one uppercase letter
+        if (!password.matches(".*[A-Z].*")) {
+            throw new IllegalArgumentException("Password must contain at least one uppercase letter");
+        }
+
+        // Check for at least one lowercase letter
+        if (!password.matches(".*[a-z].*")) {
+            throw new IllegalArgumentException("Password must contain at least one lowercase letter");
+        }
+
+        // Check for at least one digit
+        if (!password.matches(".*\\d.*")) {
+            throw new IllegalArgumentException("Password must contain at least one number");
+        }
+
+        // Check for at least one special character
+        if (!password.matches(".*[@#$%^&+=!].*")) {
+            throw new IllegalArgumentException("Password must contain at least one special character (@#$%^&+=!)");
+        }
+    }
+
+    /**
      * Normalizes string values to lowercase for consistency
      * Handles null and empty strings gracefully
      */

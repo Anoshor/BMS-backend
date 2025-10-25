@@ -34,9 +34,12 @@ public class TenantService {
     
     @Autowired
     private ApartmentRepository apartmentRepository;
-    
+
     @Autowired
     private MaintenanceRequestRepository maintenanceRequestRepository;
+
+    @Autowired
+    private PaymentTransactionService paymentTransactionService;
 
     public TenantPropertyConnection connectTenantToProperty(User manager, ConnectTenantRequest request) {
         // Validate manager
@@ -92,7 +95,13 @@ public class TenantService {
         apartment.setTenantPhone(tenant.getPhone());
         apartmentRepository.save(apartment);
 
-        return connectionRepository.save(connection);
+        // Save the connection
+        TenantPropertyConnection savedConnection = connectionRepository.save(connection);
+
+        // Auto-generate pending rent payments for the lease duration
+        paymentTransactionService.generateRentPaymentsForLease(savedConnection);
+
+        return savedConnection;
     }
 
     public List<TenantPropertyConnection> searchTenants(User manager, String searchText) {

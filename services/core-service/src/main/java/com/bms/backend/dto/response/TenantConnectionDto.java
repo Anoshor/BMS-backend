@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public class TenantConnectionDto {
 
+    private UUID id; // Connection ID (lease ID)
     private UUID tenantId;
     private String tenantName;
     private String tenantEmail;
@@ -39,6 +40,7 @@ public class TenantConnectionDto {
     
     // Constructor from TenantPropertyConnection
     public TenantConnectionDto(TenantPropertyConnection connection) {
+        this.id = connection.getId(); // Set connection ID
         if (connection.getTenant() != null) {
             this.tenantId = connection.getTenant().getId();
             this.tenantName = connection.getTenant().getFirstName() + " " + connection.getTenant().getLastName();
@@ -58,6 +60,14 @@ public class TenantConnectionDto {
     }
     
     // Getters and Setters
+    public UUID getId() {
+        return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
     public UUID getTenantId() {
         return tenantId;
     }

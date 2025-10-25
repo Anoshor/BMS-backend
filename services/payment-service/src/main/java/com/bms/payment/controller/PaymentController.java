@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,7 +18,7 @@ import java.util.Map;
 @RequestMapping("/api/payments")
 @CrossOrigin(origins = "*")
 @RequiredArgsConstructor
-@Slf4j
+
 @Tag(name = "Payment", description = "Payment processing APIs")
 public class PaymentController {
 
@@ -29,7 +29,6 @@ public class PaymentController {
     public ResponseEntity<Map<String, String>> getPublishableKey() {
         Map<String, String> response = new HashMap<>();
         response.put("publishableKey", paymentService.getPublishableKey());
-        log.info("Publishable key requested");
         return ResponseEntity.ok(response);
     }
 
@@ -65,8 +64,6 @@ public class PaymentController {
     public ResponseEntity<PaymentIntentResponse> createCardPaymentIntent(
             @Valid @RequestBody PaymentIntentRequest request,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
-        log.info("Creating card payment intent for lease: {} or manual amount: {}",
-            request.getLeaseId(), request.getAmount());
         PaymentIntentResponse response = paymentService.createCardPaymentIntent(request, authHeader);
 
         if (response.getError() != null) {
@@ -110,8 +107,6 @@ public class PaymentController {
     public ResponseEntity<PaymentIntentResponse> createACHPaymentIntent(
             @Valid @RequestBody PaymentIntentRequest request,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
-        log.info("Creating ACH payment intent for lease: {} or manual amount: {}",
-            request.getLeaseId(), request.getAmount());
         PaymentIntentResponse response = paymentService.createACHPaymentIntent(request, authHeader);
 
         if (response.getError() != null) {
@@ -125,7 +120,6 @@ public class PaymentController {
     @Operation(summary = "Get payment intent", description = "Retrieves a PaymentIntent by ID")
     public ResponseEntity<PaymentIntentResponse> getPaymentIntent(
             @PathVariable String paymentIntentId) {
-        log.info("Retrieving payment intent: {}", paymentIntentId);
         PaymentIntentResponse response = paymentService.getPaymentIntent(paymentIntentId);
 
         if (response.getError() != null) {
@@ -135,11 +129,10 @@ public class PaymentController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{paymentIntentId}/cancel")
+    @PostMapping("/{paymentIntentId}/ ")
     @Operation(summary = "Cancel payment intent", description = "Cancels a PaymentIntent")
     public ResponseEntity<PaymentIntentResponse> cancelPaymentIntent(
             @PathVariable String paymentIntentId) {
-        log.info("Canceling payment intent: {}", paymentIntentId);
         PaymentIntentResponse response = paymentService.cancelPaymentIntent(paymentIntentId);
 
         if (response.getError() != null) {

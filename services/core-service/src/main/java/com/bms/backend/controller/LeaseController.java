@@ -5,10 +5,13 @@ import com.bms.backend.dto.response.ApiResponse;
 import com.bms.backend.dto.response.LeaseDetailsDto;
 import com.bms.backend.dto.response.LeaseListingDto;
 import com.bms.backend.dto.response.LeasePaymentDetailsDto;
+import com.bms.backend.dto.response.LeasePaymentScheduleResponse;
+import com.bms.backend.dto.response.LeasePaymentSummaryDto;
 import com.bms.backend.entity.TenantPropertyConnection;
 import com.bms.backend.entity.User;
 import com.bms.backend.service.LeaseService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -219,6 +222,59 @@ public class LeaseController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, null, "Failed to reactivate lease: " + e.getMessage()));
+        }
+    }
+
+    // Get lease payment schedule (paginated)
+    @GetMapping("/{id}/payment-schedule")
+    @Operation(
+            summary = "Get lease payment schedule",
+            description = "Retrieves paginated payment schedule for a lease. By default returns current month + next 2 months. " +
+                    "Use startMonth and endMonth (YYYY-MM format) or limit parameter to customize the range."
+    )
+    public ResponseEntity<ApiResponse<LeasePaymentScheduleResponse>> getLeasePaymentSchedule(
+            @PathVariable UUID id,
+            @Parameter(description = "Start month in YYYY-MM format", example = "2024-01")
+            @RequestParam(required = false) String startMonth,
+            @Parameter(description = "End month in YYYY-MM format", example = "2024-12")
+            @RequestParam(required = false) String endMonth,
+            @Parameter(description = "Number of months to return from start", example = "3")
+            @RequestParam(required = false) Integer limit) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+
+            LeasePaymentScheduleResponse schedule = leaseService.getLeasePaymentSchedule(user, id, startMonth, endMonth, limit);
+            return ResponseEntity.ok(new ApiResponse<>(true, schedule, "Payment schedule retrieved successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ApiResponse<>(false, null, e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, null, "Failed to retrieve payment schedule: " + e.getMessage()));
+        }
+    }
+
+    // Get lease payment summary
+    @GetMapping("/{id}/payment-summary")
+    @Operation(
+            summary = "Get lease payment summary",
+            description = "Retrieves lightweight payment summary including total pending amount, next due date, " +
+                    "and payment counts. Does not include full payment schedule."
+    )
+    public ResponseEntity<ApiResponse<LeasePaymentSummaryDto>> getLeasePaymentSummary(@PathVariable UUID id) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+
+            LeasePaymentSummaryDto summary = leaseService.getLeasePaymentSummary(user, id);
+            return ResponseEntity.ok(new ApiResponse<>(true, summary, "Payment summary retrieved successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse<>(false, null, e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, null, "Failed to retrieve payment summary: " + e.getMessage()));
         }
     }
 }

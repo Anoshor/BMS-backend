@@ -4,6 +4,9 @@ import com.bms.backend.dto.request.LeaseUpdateRequest;
 import com.bms.backend.dto.response.LeaseDetailsDto;
 import com.bms.backend.dto.response.LeaseListingDto;
 import com.bms.backend.dto.response.LeasePaymentDetailsDto;
+import com.bms.backend.dto.response.LeasePaymentScheduleDto;
+import com.bms.backend.dto.response.LeasePaymentScheduleResponse;
+import com.bms.backend.dto.response.LeasePaymentSummaryDto;
 import com.bms.backend.entity.TenantPropertyConnection;
 import com.bms.backend.entity.User;
 import com.bms.backend.enums.UserRole;
@@ -14,7 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -307,6 +313,213 @@ public class LeaseService {
         int year = connection.getStartDate().getYear();
 
         return String.format("LEASE-%d-%s", year, suffix);
+    }
+
+    /**
+     * Get paginated payment schedule for a lease
+     * Returns default of current month + next 2 months if no parameters provided
+     */
+    public LeasePaymentScheduleResponse getLeasePaymentSchedule(User user, UUID leaseId,
+                                                                 String startMonth, String endMonth, Integer limit) {
+        TenantPropertyConnection connection = connectionRepository.findById(leaseId)
+                .orElseThrow(() -> new IllegalArgumentException("Lease not found"));
+
+        // Verify user has access to this lease
+        validateLeaseAccess(user, connection);
+
+        // Parse dates or use defaults
+        YearMonth start;
+        YearMonth end;
+
+        if (startMonth != null) {
+            start = YearMonth.parse(startMonth);
+        } else {
+            // Default: current month
+            start = YearMonth.now();
+        }
+
+        if (endMonth != null) {
+            end = YearMonth.parse(endMonth);
+        } else if (limit != null && limit > 0) {
+            // Use limit to determine end month
+            end = start.plusMonths(limit - 1);
+        } else {
+            // Default: current month + next 2 months (3 months total)
+            end = start.plusMonths(2);
+        }
+
+        // Calculate total months in lease
+        LocalDate leaseStart = connection.getStartDate();
+        LocalDate leaseEnd = connection.getEndDate();
+        int totalMonths = (int) ChronoUnit.MONTHS.between(
+            YearMonth.from(leaseStart),
+            YearMonth.from(leaseEnd)
+        ) + 1;
+
+        // Generate schedule for the requested period
+        List<LeasePaymentScheduleDto> schedule = generatePaymentSchedule(connection, start, end);
+
+        // Build response
+        LeasePaymentScheduleResponse response = new LeasePaymentScheduleResponse();
+        response.setLeaseId(connection.getId());
+        response.setPropertyName(connection.getPropertyName());
+        response.setTenantName(connection.getTenant().getFirstName() + " " + connection.getTenant().getLastName());
+        response.setSchedule(schedule);
+        response.setTotalMonths(totalMonths);
+        response.setCurrentPage(0); // Can be enhanced for actual pagination
+        response.setItemsReturned(schedule.size());
+
+        return response;
+    }
+
+    /**
+     * Get payment summary for a lease
+     */
+    public LeasePaymentSummaryDto getLeasePaymentSummary(User user, UUID leaseId) {
+        TenantPropertyConnection connection = connectionRepository.findById(leaseId)
+                .orElseThrow(() -> new IllegalArgumentException("Lease not found"));
+
+        // Verify user has access to this lease
+        validateLeaseAccess(user, connection);
+
+        LocalDate today = LocalDate.now();
+        LocalDate leaseStart = connection.getStartDate();
+        LocalDate leaseEnd = connection.getEndDate();
+
+        BigDecimal monthlyRent = BigDecimal.valueOf(connection.getMonthlyRent());
+
+        // Calculate total months in lease
+        int totalMonths = (int) ChronoUnit.MONTHS.between(
+            YearMonth.from(leaseStart),
+            YearMonth.from(leaseEnd)
+        ) + 1;
+
+        // Calculate upcoming payments count
+        YearMonth currentMonth = YearMonth.from(today);
+        YearMonth endMonth = YearMonth.from(leaseEnd);
+        int upcomingCount = 0;
+        if (!currentMonth.isAfter(endMonth)) {
+            upcomingCount = (int) ChronoUnit.MONTHS.between(currentMonth, endMonth) + 1;
+        }
+
+        // Calculate overdue payments (simplified - assumes payment due on 1st of each month)
+        int overdueCount = 0;
+        BigDecimal totalPending = BigDecimal.ZERO;
+
+        if (today.isAfter(leaseStart)) {
+            // Check if current month payment is overdue (after 5th)
+            if (today.getDayOfMonth() > 5) {
+                overdueCount = 1;
+                totalPending = monthlyRent.add(calculateLatePaymentCharges(connection));
+            } else {
+                // Current month due but not overdue yet
+                totalPending = monthlyRent;
+            }
+        }
+
+        // Next due date (1st of next month or current month if before lease end)
+        LocalDate nextDueDate = null;
+        if (!today.isAfter(leaseEnd)) {
+            YearMonth nextPaymentMonth = currentMonth;
+            nextDueDate = nextPaymentMonth.atDay(1);
+        }
+
+        // Build summary
+        LeasePaymentSummaryDto summary = new LeasePaymentSummaryDto();
+        summary.setLeaseId(connection.getId());
+        summary.setFormattedLeaseId(generateFormattedLeaseId(connection));
+        summary.setPropertyName(connection.getPropertyName());
+        summary.setTenantName(connection.getTenant().getFirstName() + " " + connection.getTenant().getLastName());
+        summary.setMonthlyRent(monthlyRent);
+        summary.setTotalPending(totalPending);
+        summary.setNextDueDate(nextDueDate);
+        summary.setUpcomingPaymentsCount(upcomingCount);
+        summary.setOverduePaymentsCount(overdueCount);
+        summary.setLeaseStartDate(leaseStart);
+        summary.setLeaseEndDate(leaseEnd);
+        summary.setTotalMonths(totalMonths);
+
+        return summary;
+    }
+
+    /**
+     * Generate payment schedule items for a given date range
+     */
+    private List<LeasePaymentScheduleDto> generatePaymentSchedule(TenantPropertyConnection connection,
+                                                                   YearMonth start, YearMonth end) {
+        List<LeasePaymentScheduleDto> schedule = new ArrayList<>();
+
+        YearMonth leaseStartMonth = YearMonth.from(connection.getStartDate());
+        YearMonth leaseEndMonth = YearMonth.from(connection.getEndDate());
+        BigDecimal monthlyRent = BigDecimal.valueOf(connection.getMonthlyRent());
+        LocalDate today = LocalDate.now();
+        YearMonth currentMonth = YearMonth.from(today);
+
+        // Ensure start and end are within lease period
+        if (start.isBefore(leaseStartMonth)) {
+            start = leaseStartMonth;
+        }
+        if (end.isAfter(leaseEndMonth)) {
+            end = leaseEndMonth;
+        }
+
+        YearMonth current = start;
+        while (!current.isAfter(end)) {
+            LeasePaymentScheduleDto item = new LeasePaymentScheduleDto();
+
+            // Format month as YYYY-MM
+            item.setMonth(current.format(DateTimeFormatter.ofPattern("yyyy-MM")));
+
+            // Due date is 1st of the month
+            LocalDate dueDate = current.atDay(1);
+            item.setDueDate(dueDate);
+
+            item.setRentAmount(monthlyRent);
+
+            // Determine status and calculate late charges
+            String status;
+            BigDecimal lateCharges = BigDecimal.ZERO;
+
+            if (current.isBefore(currentMonth)) {
+                // Past month - mark as overdue (simplified - should check actual payment records)
+                status = "OVERDUE";
+                lateCharges = monthlyRent.multiply(BigDecimal.valueOf(0.10))
+                    .setScale(2, BigDecimal.ROUND_HALF_UP);
+            } else if (current.equals(currentMonth)) {
+                // Current month
+                if (today.getDayOfMonth() > 5) {
+                    status = "OVERDUE";
+                    lateCharges = monthlyRent.multiply(BigDecimal.valueOf(0.10))
+                        .setScale(2, BigDecimal.ROUND_HALF_UP);
+                } else {
+                    status = "PENDING";
+                }
+            } else {
+                // Future month
+                status = "PENDING";
+            }
+
+            item.setLateCharges(lateCharges);
+            item.setTotalAmount(monthlyRent.add(lateCharges));
+            item.setStatus(status);
+
+            schedule.add(item);
+            current = current.plusMonths(1);
+        }
+
+        return schedule;
+    }
+
+    /**
+     * Validate that user has access to view this lease
+     */
+    private void validateLeaseAccess(User user, TenantPropertyConnection connection) {
+        boolean isTenant = connection.getTenant().getId().equals(user.getId());
+        boolean isManager = connection.getManager().getId().equals(user.getId());
+
+        if (!isTenant && !isManager) {
+            throw new IllegalArgumentException("You don't have permission to view this lease");
+        }
     }
 
     // Helper methods
