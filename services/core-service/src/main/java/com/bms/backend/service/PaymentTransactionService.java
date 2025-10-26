@@ -95,42 +95,64 @@ public class PaymentTransactionService {
         TenantPropertyConnection connection = connectionRepository.findById(request.getConnectionId())
                 .orElseThrow(() -> new IllegalArgumentException("Lease/Connection not found"));
 
-        // Check if payment already exists
-        Optional<PaymentTransaction> existingPayment =
-                paymentRepository.findByStripePaymentIntentId(request.getStripePaymentIntentId());
-
         PaymentTransaction payment;
-        if (existingPayment.isPresent()) {
-            // Update existing payment
-            payment = existingPayment.get();
-            payment.setStatus(request.getStatus());
-            payment.setPaymentMethod(request.getPaymentMethod());
-            payment.setReceiptUrl(request.getReceiptUrl());
-            payment.setFailureReason(request.getFailureReason());
-            payment.setPaymentDate(request.getPaymentDate());
-        } else {
-            // Create new payment
-            payment = new PaymentTransaction();
-            payment.setTenant(tenant);
-            payment.setConnection(connection);
+
+        // PRIORITY 1: If paymentTransactionId is provided, update that specific record
+        if (request.getPaymentTransactionId() != null) {
+            payment = paymentRepository.findById(request.getPaymentTransactionId())
+                    .orElseThrow(() -> new IllegalArgumentException("Payment transaction not found with ID: " + request.getPaymentTransactionId()));
+
+            // Update the existing payment record
             payment.setStripePaymentIntentId(request.getStripePaymentIntentId());
-            payment.setStripePaymentMethodId(request.getStripePaymentMethodId());
-            payment.setAmount(request.getAmount());
-            payment.setCurrency(request.getCurrency());
             payment.setStatus(request.getStatus());
             payment.setPaymentMethod(request.getPaymentMethod());
-            payment.setDescription(request.getDescription());
-            payment.setReceiptEmail(request.getReceiptEmail());
+            payment.setStripePaymentMethodId(request.getStripePaymentMethodId());
             payment.setReceiptUrl(request.getReceiptUrl());
+            payment.setReceiptEmail(request.getReceiptEmail());
             payment.setFailureReason(request.getFailureReason());
             payment.setPaymentDate(request.getPaymentDate());
 
-            // Set due date (if not provided, use first of next month)
-            if (request.getPaymentDate() != null) {
-                payment.setDueDate(request.getPaymentDate());
+            System.out.println("✅ Updated specific payment record with ID: " + request.getPaymentTransactionId());
+        }
+        // PRIORITY 2: Check if payment already exists by Stripe Payment Intent ID
+        else {
+            Optional<PaymentTransaction> existingPayment =
+                    paymentRepository.findByStripePaymentIntentId(request.getStripePaymentIntentId());
+
+            if (existingPayment.isPresent()) {
+                // Update existing payment
+                payment = existingPayment.get();
+                payment.setStatus(request.getStatus());
+                payment.setPaymentMethod(request.getPaymentMethod());
+                payment.setStripePaymentMethodId(request.getStripePaymentMethodId());
+                payment.setReceiptUrl(request.getReceiptUrl());
+                payment.setReceiptEmail(request.getReceiptEmail());
+                payment.setFailureReason(request.getFailureReason());
+                payment.setPaymentDate(request.getPaymentDate());
             } else {
-                LocalDate nextMonth = LocalDate.now().plusMonths(1).with(TemporalAdjusters.firstDayOfMonth());
-                payment.setDueDate(nextMonth.atStartOfDay(ZoneId.systemDefault()).toInstant());
+                // Create new payment
+                payment = new PaymentTransaction();
+                payment.setTenant(tenant);
+                payment.setConnection(connection);
+                payment.setStripePaymentIntentId(request.getStripePaymentIntentId());
+                payment.setStripePaymentMethodId(request.getStripePaymentMethodId());
+                payment.setAmount(request.getAmount());
+                payment.setCurrency(request.getCurrency());
+                payment.setStatus(request.getStatus());
+                payment.setPaymentMethod(request.getPaymentMethod());
+                payment.setDescription(request.getDescription());
+                payment.setReceiptEmail(request.getReceiptEmail());
+                payment.setReceiptUrl(request.getReceiptUrl());
+                payment.setFailureReason(request.getFailureReason());
+                payment.setPaymentDate(request.getPaymentDate());
+
+                // Set due date (if not provided, use first of next month)
+                if (request.getPaymentDate() != null) {
+                    payment.setDueDate(request.getPaymentDate());
+                } else {
+                    LocalDate nextMonth = LocalDate.now().plusMonths(1).with(TemporalAdjusters.firstDayOfMonth());
+                    payment.setDueDate(nextMonth.atStartOfDay(ZoneId.systemDefault()).toInstant());
+                }
             }
         }
 

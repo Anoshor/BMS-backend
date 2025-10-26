@@ -9,6 +9,9 @@ public class PaymentIntentRequest {
     @Schema(description = "Lease ID - when provided, amount is fetched from core-service (SECURE)", example = "04fc37d0-e819-4488-9849-4f237f9b45c1")
     private String leaseId;
 
+    @Schema(description = "Payment Transaction ID - specific payment record to update", example = "550e8400-e29b-41d4-a716-446655440000")
+    private String paymentTransactionId;
+
     @Min(value = 50, message = "Minimum amount is 50 cents")
     @Schema(description = "Amount in cents (e.g., 5000 = $50.00) - Only for non-lease payments. Ignored if leaseId is provided.", example = "5000")
     private Long amount;
@@ -53,6 +56,7 @@ public class PaymentIntentRequest {
 
     public static class Builder {
         private String leaseId;
+        private String paymentTransactionId;
         private Long amount;
         private String currency = "usd";
         private String paymentMethodId;
@@ -67,6 +71,11 @@ public class PaymentIntentRequest {
 
         public Builder leaseId(String leaseId) {
             this.leaseId = leaseId;
+            return this;
+        }
+
+        public Builder paymentTransactionId(String paymentTransactionId) {
+            this.paymentTransactionId = paymentTransactionId;
             return this;
         }
 
@@ -128,6 +137,7 @@ public class PaymentIntentRequest {
         public PaymentIntentRequest build() {
             PaymentIntentRequest request = new PaymentIntentRequest();
             request.leaseId = this.leaseId;
+            request.paymentTransactionId = this.paymentTransactionId;
             request.amount = this.amount;
             request.currency = this.currency;
             request.paymentMethodId = this.paymentMethodId;
@@ -141,6 +151,14 @@ public class PaymentIntentRequest {
             request.receiptEmail = this.receiptEmail;
             return request;
         }
+    }
+
+    public String getPaymentTransactionId() {
+        return paymentTransactionId;
+    }
+
+    public void setPaymentTransactionId(String paymentTransactionId) {
+        this.paymentTransactionId = paymentTransactionId;
     }
 
     // Getters and Setters

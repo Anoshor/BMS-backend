@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public class RecordPaymentRequest {
 
+    private UUID paymentTransactionId; // Optional - if provided, update this specific payment record
     private UUID tenantId;
     private UUID connectionId; // lease/connection ID
     private String stripePaymentIntentId;
@@ -26,6 +27,14 @@ public class RecordPaymentRequest {
     public RecordPaymentRequest() {}
 
     // Getters and Setters
+    public UUID getPaymentTransactionId() {
+        return paymentTransactionId;
+    }
+
+    public void setPaymentTransactionId(UUID paymentTransactionId) {
+        this.paymentTransactionId = paymentTransactionId;
+    }
+
     public UUID getTenantId() {
         return tenantId;
     }

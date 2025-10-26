@@ -53,6 +53,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/health").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
 
+                        // Payment recording endpoint (called from payment-service)
+                        .requestMatchers("/api/v1/payments/record").permitAll()
+
                         // H2 Console (for development)
                         .requestMatchers("/h2-console/**").permitAll()
 

@@ -4,9 +4,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Schema(description = "Monthly payment schedule item for a lease")
 public class LeasePaymentScheduleDto {
+
+    @Schema(description = "Payment transaction ID (null if no payment record exists yet)", example = "550e8400-e29b-41d4-a716-446655440000")
+    private UUID paymentTransactionId;
 
     @Schema(description = "Payment month (YYYY-MM)", example = "2024-10")
     private String month;
@@ -40,6 +44,14 @@ public class LeasePaymentScheduleDto {
     }
 
     // Getters and Setters
+    public UUID getPaymentTransactionId() {
+        return paymentTransactionId;
+    }
+
+    public void setPaymentTransactionId(UUID paymentTransactionId) {
+        this.paymentTransactionId = paymentTransactionId;
+    }
+
     public String getMonth() {
         return month;
     }

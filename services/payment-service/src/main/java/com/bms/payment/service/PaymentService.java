@@ -101,6 +101,12 @@ public class PaymentService {
                     .putMetadata("tenantId", tenantId)
                     .putMetadata("connectionId", request.getLeaseId()); // leaseId is actually connectionId (UUID)
 
+            // Add paymentTransactionId if provided (for updating specific payment record)
+            if (request.getPaymentTransactionId() != null && !request.getPaymentTransactionId().isEmpty()) {
+                paramsBuilder.putMetadata("paymentTransactionId", request.getPaymentTransactionId());
+                log.info("Added paymentTransactionId to metadata: {}", request.getPaymentTransactionId());
+            }
+
             // Handle tenant ID - create/get customer
             if (tenantId != null) {
                 Customer customer = customerService.getOrCreateCustomer(
@@ -136,7 +142,7 @@ public class PaymentService {
             // This ensures payment history exists even if webhooks fail
             try {
                 log.info("🔄 Attempting to record PENDING payment in core-service...");
-                webhookService.recordPaymentTransaction(intent, "PENDING");
+                webhookService.recordPaymentTransaction(intent, "PENDING", authToken);
                 log.info("✅ Successfully recorded PENDING payment transaction for PaymentIntent: {}", intent.getId());
             } catch (Exception e) {
                 log.error("❌ Failed to record initial PENDING transaction: {}", e.getMessage(), e);
@@ -229,6 +235,12 @@ public class PaymentService {
                     .putMetadata("tenantId", tenantId)
                     .putMetadata("connectionId", request.getLeaseId()); // leaseId is actually connectionId (UUID)
 
+            // Add paymentTransactionId if provided (for updating specific payment record)
+            if (request.getPaymentTransactionId() != null && !request.getPaymentTransactionId().isEmpty()) {
+                paramsBuilder.putMetadata("paymentTransactionId", request.getPaymentTransactionId());
+                log.info("Added paymentTransactionId to metadata: {}", request.getPaymentTransactionId());
+            }
+
             // Handle tenant ID - create/get customer
             if (tenantId != null) {
                 Customer customer = customerService.getOrCreateCustomer(
@@ -264,7 +276,7 @@ public class PaymentService {
             // This ensures payment history exists even if webhooks fail
             try {
                 log.info("🔄 Attempting to record PENDING payment in core-service...");
-                webhookService.recordPaymentTransaction(intent, "PENDING");
+                webhookService.recordPaymentTransaction(intent, "PENDING", authToken);
                 log.info("✅ Successfully recorded PENDING payment transaction for PaymentIntent: {}", intent.getId());
             } catch (Exception e) {
                 log.error("❌ Failed to record initial PENDING transaction: {}", e.getMessage(), e);

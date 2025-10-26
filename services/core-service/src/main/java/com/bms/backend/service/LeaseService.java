@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -37,6 +38,9 @@ public class LeaseService {
 
     @Autowired
     private com.bms.backend.repository.ApartmentRepository apartmentRepository;
+
+    @Autowired
+    private com.bms.backend.repository.PaymentTransactionRepository paymentTransactionRepository;
 
     public List<LeaseListingDto> getAllLeases(User user, String status, String propertyName, String tenantName) {
         validateManagerAccess(user);
@@ -444,6 +448,7 @@ public class LeaseService {
 
     /**
      * Generate payment schedule items for a given date range
+     * NOW CHECKS ACTUAL PAYMENT RECORDS to determine status
      */
     private List<LeasePaymentScheduleDto> generatePaymentSchedule(TenantPropertyConnection connection,
                                                                    YearMonth start, YearMonth end) {
@@ -463,12 +468,16 @@ public class LeaseService {
             end = leaseEndMonth;
         }
 
+        // Fetch all payment transactions for this connection
+        var paymentTransactions = paymentTransactionRepository.findByConnectionOrderByCreatedAtDesc(connection);
+
         YearMonth current = start;
         while (!current.isAfter(end)) {
             LeasePaymentScheduleDto item = new LeasePaymentScheduleDto();
 
             // Format month as YYYY-MM
-            item.setMonth(current.format(DateTimeFormatter.ofPattern("yyyy-MM")));
+            String monthStr = current.format(DateTimeFormatter.ofPattern("yyyy-MM"));
+            item.setMonth(monthStr);
 
             // Due date is 1st of the month
             LocalDate dueDate = current.atDay(1);
@@ -476,12 +485,59 @@ public class LeaseService {
 
             item.setRentAmount(monthlyRent);
 
+            // Find payment record for this month (to get ID and status)
+            final YearMonth monthToCheck = current; // Capture for lambda
+            var matchingPayment = paymentTransactions.stream()
+                .filter(payment -> {
+                    // Check if payment's due date matches this month
+                    Instant dueDateInstant = payment.getDueDate();
+                    if (dueDateInstant != null) {
+                        LocalDate paymentDueDate = LocalDate.ofInstant(dueDateInstant, java.time.ZoneId.of("UTC"));
+                        YearMonth paymentMonth = YearMonth.from(paymentDueDate);
+                        return paymentMonth.equals(monthToCheck);
+                    }
+                    return false;
+                })
+                .findFirst();
+
+            // If no payment record exists for this month, create one
+            if (matchingPayment.isEmpty()) {
+                com.bms.backend.entity.PaymentTransaction newPayment = new com.bms.backend.entity.PaymentTransaction();
+                newPayment.setTenant(connection.getTenant());
+                newPayment.setConnection(connection);
+                newPayment.setAmount(monthlyRent);
+                newPayment.setCurrency("USD");
+                newPayment.setStatus(com.bms.backend.entity.PaymentTransaction.PaymentStatus.PENDING);
+                newPayment.setDescription("Monthly rent for " + connection.getPropertyName() + " - " +
+                    current.getMonth() + " " + current.getYear());
+
+                // Set due date to 1st of the month in UTC
+                Instant dueDateInstant = dueDate.atStartOfDay(java.time.ZoneId.of("UTC")).toInstant();
+                newPayment.setDueDate(dueDateInstant);
+
+                // Save the new payment record
+                newPayment = paymentTransactionRepository.save(newPayment);
+                matchingPayment = java.util.Optional.of(newPayment);
+
+                System.out.println("✅ Created new payment record for month: " + monthStr + ", ID: " + newPayment.getId());
+            }
+
+            // Set payment transaction ID
+            item.setPaymentTransactionId(matchingPayment.get().getId());
+
+            // Check if paid
+            boolean isPaid = matchingPayment.isPresent() &&
+                matchingPayment.get().getStatus() == com.bms.backend.entity.PaymentTransaction.PaymentStatus.PAID;
+
             // Determine status and calculate late charges
             String status;
             BigDecimal lateCharges = BigDecimal.ZERO;
 
-            if (current.isBefore(currentMonth)) {
-                // Past month - mark as overdue (simplified - should check actual payment records)
+            if (isPaid) {
+                // Payment has been made
+                status = "PAID";
+            } else if (current.isBefore(currentMonth)) {
+                // Past month - mark as overdue
                 status = "OVERDUE";
                 lateCharges = monthlyRent.multiply(BigDecimal.valueOf(0.10))
                     .setScale(2, BigDecimal.ROUND_HALF_UP);

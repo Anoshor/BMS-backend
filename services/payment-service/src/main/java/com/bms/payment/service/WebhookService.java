@@ -33,7 +33,7 @@ public class WebhookService {
     /**
      * Record payment transaction in core-service
      */
-    public void recordPaymentTransaction(PaymentIntent paymentIntent, String status) {
+    public void recordPaymentTransaction(PaymentIntent paymentIntent, String status, String authToken) {
         try {
             log.info("Recording payment transaction - PaymentIntent: {}, Status: {}", paymentIntent.getId(), status);
 
@@ -46,11 +46,17 @@ public class WebhookService {
 
             String tenantId = metadata.get("tenantId");
             String connectionId = metadata.get("connectionId");
+            String paymentTransactionId = metadata.get("paymentTransactionId");
 
             if (tenantId == null || connectionId == null) {
                 log.warn("PaymentIntent {} missing required metadata - tenantId: {}, connectionId: {}",
                     paymentIntent.getId(), tenantId, connectionId);
                 return;
+            }
+
+            // Log if we have a specific payment transaction ID
+            if (paymentTransactionId != null) {
+                log.info("Found paymentTransactionId in metadata: {} - Will update this specific payment record", paymentTransactionId);
             }
 
             // Convert amount from cents to dollars
@@ -84,6 +90,11 @@ public class WebhookService {
             recordPaymentRequest.put("receiptUrl", receiptUrl);
             recordPaymentRequest.put("failureReason", failureReason);
 
+            // Add paymentTransactionId if available (for updating specific payment record)
+            if (paymentTransactionId != null && !paymentTransactionId.isEmpty()) {
+                recordPaymentRequest.put("paymentTransactionId", UUID.fromString(paymentTransactionId));
+            }
+
             // Set payment date if succeeded
             if ("PAID".equals(status)) {
                 recordPaymentRequest.put("paymentDate", Instant.now());
@@ -95,25 +106,36 @@ public class WebhookService {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
+            // Add Authorization header with JWT token
+            if (authToken != null && !authToken.isEmpty()) {
+                headers.set("Authorization", "Bearer " + authToken);
+                log.info("Including Authorization header for payment recording");
+            } else {
+                log.warn("No auth token provided for recording payment transaction");
+            }
+
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(recordPaymentRequest, headers);
 
             log.info("Sending payment transaction to core-service: {}", url);
             Map<String, Object> response = restTemplate.postForObject(url, request, Map.class);
-            log.info("Successfully recorded payment transaction for PaymentIntent: {} - Response: {}",
-                paymentIntent.getId(), response);
+            log.info("✅ Successfully recorded payment transaction for PaymentIntent: {}", paymentIntent.getId());
 
         } catch (org.springframework.web.client.HttpClientErrorException e) {
-            log.error("HTTP Client Error while recording payment transaction for PaymentIntent: {} - Status: {}, Response: {}",
+            log.error("❌ HTTP Client Error while recording payment transaction for PaymentIntent: {} - Status: {}, Response: {}",
                 paymentIntent.getId(), e.getStatusCode(), e.getResponseBodyAsString(), e);
+            throw e; // Re-throw so caller knows it failed
         } catch (org.springframework.web.client.HttpServerErrorException e) {
-            log.error("HTTP Server Error while recording payment transaction for PaymentIntent: {} - Status: {}, Response: {}",
+            log.error("❌ HTTP Server Error while recording payment transaction for PaymentIntent: {} - Status: {}, Response: {}",
                 paymentIntent.getId(), e.getStatusCode(), e.getResponseBodyAsString(), e);
+            throw e;
         } catch (org.springframework.web.client.ResourceAccessException e) {
-            log.error("Network Error - Cannot reach core-service at {} for PaymentIntent: {} - Error: {}",
+            log.error("❌ Network Error - Cannot reach core-service at {} for PaymentIntent: {} - Error: {}",
                 coreServiceUrl, paymentIntent.getId(), e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            log.error("Unexpected error while recording payment transaction for PaymentIntent: {} - Error: {}",
+            log.error("❌ Unexpected error while recording payment transaction for PaymentIntent: {} - Error: {}",
                 paymentIntent.getId(), e.getMessage(), e);
+            throw e;
         }
     }
 

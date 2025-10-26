@@ -3,7 +3,9 @@ package com.bms.payment.controller;
 import com.bms.payment.service.WebhookService;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
+import com.stripe.model.EventDataObjectDeserializer;
 import com.stripe.model.PaymentIntent;
+import com.stripe.model.StripeObject;
 import com.stripe.net.Webhook;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -57,57 +59,74 @@ public class WebhookController {
         // Handle the event
         switch (event.getType()) {
             case "payment_intent.succeeded":
-                PaymentIntent paymentIntent = (PaymentIntent) event.getDataObjectDeserializer()
-                        .getObject().orElse(null);
-                if (paymentIntent != null) {
-                    log.info("Processing payment_intent.succeeded for PaymentIntent: {}", paymentIntent.getId());
-                    handlePaymentSuccess(paymentIntent);
-                } else {
-                    log.warn("Received payment_intent.succeeded event but PaymentIntent is null");
+                try {
+                    // Get PaymentIntent directly from event data
+                    PaymentIntent paymentIntent = (PaymentIntent) event.getData().getObject();
+
+                    if (paymentIntent != null) {
+                        log.info("💰 Processing payment_intent.succeeded for PaymentIntent: {}", paymentIntent.getId());
+                        handlePaymentSuccess(paymentIntent);
+                    } else {
+                        log.error("❌ PaymentIntent is null in webhook event");
+                    }
+                } catch (Exception e) {
+                    log.error("❌ Error processing payment_intent.succeeded: {}", e.getMessage(), e);
                 }
                 break;
 
             case "payment_intent.payment_failed":
-                PaymentIntent failedIntent = (PaymentIntent) event.getDataObjectDeserializer()
-                        .getObject().orElse(null);
-                if (failedIntent != null) {
-                    log.info("Processing payment_intent.payment_failed for PaymentIntent: {}", failedIntent.getId());
-                    handlePaymentFailure(failedIntent);
-                } else {
-                    log.warn("Received payment_intent.payment_failed event but PaymentIntent is null");
+                try {
+                    PaymentIntent paymentIntent = (PaymentIntent) event.getData().getObject();
+                    if (paymentIntent != null) {
+                        log.info("❌ Processing payment_intent.payment_failed for PaymentIntent: {}", paymentIntent.getId());
+                        handlePaymentFailure(paymentIntent);
+                    } else {
+                        log.warn("Received payment_intent.payment_failed event but PaymentIntent is null");
+                    }
+                } catch (Exception e) {
+                    log.error("Error processing payment_intent.payment_failed: {}", e.getMessage(), e);
                 }
                 break;
 
             case "payment_intent.canceled":
-                PaymentIntent canceledIntent = (PaymentIntent) event.getDataObjectDeserializer()
-                        .getObject().orElse(null);
-                if (canceledIntent != null) {
-                    log.info("Processing payment_intent.canceled for PaymentIntent: {}", canceledIntent.getId());
-                    handlePaymentCanceled(canceledIntent);
-                } else {
-                    log.warn("Received payment_intent.canceled event but PaymentIntent is null");
+                try {
+                    PaymentIntent paymentIntent = (PaymentIntent) event.getData().getObject();
+                    if (paymentIntent != null) {
+                        log.info("🚫 Processing payment_intent.canceled for PaymentIntent: {}", paymentIntent.getId());
+                        handlePaymentCanceled(paymentIntent);
+                    } else {
+                        log.warn("Received payment_intent.canceled event but PaymentIntent is null");
+                    }
+                } catch (Exception e) {
+                    log.error("Error processing payment_intent.canceled: {}", e.getMessage(), e);
                 }
                 break;
 
             case "payment_intent.processing":
-                PaymentIntent processingIntent = (PaymentIntent) event.getDataObjectDeserializer()
-                        .getObject().orElse(null);
-                if (processingIntent != null) {
-                    log.info("Processing payment_intent.processing for PaymentIntent: {}", processingIntent.getId());
-                    handlePaymentProcessing(processingIntent);
-                } else {
-                    log.warn("Received payment_intent.processing event but PaymentIntent is null");
+                try {
+                    PaymentIntent paymentIntent = (PaymentIntent) event.getData().getObject();
+                    if (paymentIntent != null) {
+                        log.info("⏳ Processing payment_intent.processing for PaymentIntent: {}", paymentIntent.getId());
+                        handlePaymentProcessing(paymentIntent);
+                    } else {
+                        log.warn("Received payment_intent.processing event but PaymentIntent is null");
+                    }
+                } catch (Exception e) {
+                    log.error("Error processing payment_intent.processing: {}", e.getMessage(), e);
                 }
                 break;
 
             case "payment_intent.requires_action":
-                PaymentIntent requiresActionIntent = (PaymentIntent) event.getDataObjectDeserializer()
-                        .getObject().orElse(null);
-                if (requiresActionIntent != null) {
-                    log.info("Processing payment_intent.requires_action for PaymentIntent: {}", requiresActionIntent.getId());
-                    handlePaymentRequiresAction(requiresActionIntent);
-                } else {
-                    log.warn("Received payment_intent.requires_action event but PaymentIntent is null");
+                try {
+                    PaymentIntent paymentIntent = (PaymentIntent) event.getData().getObject();
+                    if (paymentIntent != null) {
+                        log.info("⚠️ Processing payment_intent.requires_action for PaymentIntent: {}", paymentIntent.getId());
+                        handlePaymentRequiresAction(paymentIntent);
+                    } else {
+                        log.warn("Received payment_intent.requires_action event but PaymentIntent is null");
+                    }
+                } catch (Exception e) {
+                    log.error("Error processing payment_intent.requires_action: {}", e.getMessage(), e);
                 }
                 break;
 
@@ -126,8 +145,8 @@ public class WebhookController {
         log.info("Customer: {}", paymentIntent.getCustomer());
         log.info("Metadata: {}", paymentIntent.getMetadata());
 
-        // Record payment in core-service
-        webhookService.recordPaymentTransaction(paymentIntent, "PAID");
+        // Record payment in core-service (webhooks don't have user token)
+        webhookService.recordPaymentTransaction(paymentIntent, "PAID", null);
     }
 
     private void handlePaymentFailure(PaymentIntent paymentIntent) {
@@ -140,8 +159,8 @@ public class WebhookController {
         log.error("Failure Reason: {}", failureReason);
         log.error("Metadata: {}", paymentIntent.getMetadata());
 
-        // Record failed payment in core-service
-        webhookService.recordPaymentTransaction(paymentIntent, "FAILED");
+        // Record failed payment in core-service (webhooks don't have user token)
+        webhookService.recordPaymentTransaction(paymentIntent, "FAILED", null);
     }
 
     private void handlePaymentCanceled(PaymentIntent paymentIntent) {
@@ -149,8 +168,8 @@ public class WebhookController {
         log.info("PaymentIntent ID: {}", paymentIntent.getId());
         log.info("Metadata: {}", paymentIntent.getMetadata());
 
-        // Record canceled payment in core-service
-        webhookService.recordPaymentTransaction(paymentIntent, "CANCELED");
+        // Record canceled payment in core-service (webhooks don't have user token)
+        webhookService.recordPaymentTransaction(paymentIntent, "CANCELED", null);
     }
 
     private void handlePaymentProcessing(PaymentIntent paymentIntent) {
@@ -159,8 +178,8 @@ public class WebhookController {
         log.info("Amount: {} {}", paymentIntent.getAmount(), paymentIntent.getCurrency().toUpperCase());
         log.info("Metadata: {}", paymentIntent.getMetadata());
 
-        // Record processing payment in core-service
-        webhookService.recordPaymentTransaction(paymentIntent, "PROCESSING");
+        // Record processing payment in core-service (webhooks don't have user token)
+        webhookService.recordPaymentTransaction(paymentIntent, "PROCESSING", null);
     }
 
     private void handlePaymentRequiresAction(PaymentIntent paymentIntent) {
