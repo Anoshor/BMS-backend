@@ -41,6 +41,9 @@ public class TenantService {
     @Autowired
     private PaymentTransactionService paymentTransactionService;
 
+    @Autowired
+    private LeaseService leaseService;
+
     public TenantPropertyConnection connectTenantToProperty(User manager, ConnectTenantRequest request) {
         // Validate manager
         if (manager.getRole() != UserRole.PROPERTY_MANAGER) {
@@ -527,5 +530,135 @@ public class TenantService {
         dto.setTotalMonthlyRent(totalMonthlyRent);
 
         return dto;
+    }
+
+    /**
+     * Get most urgent payment across all tenant's active leases
+     * Returns the payment that needs most immediate attention:
+     * 1. Overdue payments first
+     * 2. Then soonest due date
+     * 3. Then highest amount
+     */
+    public com.bms.backend.dto.response.UrgentPaymentDto getMostUrgentPayment(User tenant) {
+        // Get all active leases for the tenant
+        List<TenantPropertyConnection> activeLeases = connectionRepository.findByTenantAndIsActive(tenant, true);
+
+        if (activeLeases.isEmpty()) {
+            return null; // No active leases
+        }
+
+        // For each lease, get the next payment due
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.YearMonth currentMonth = java.time.YearMonth.now();
+
+        com.bms.backend.dto.response.LeasePaymentScheduleDto mostUrgentPayment = null;
+        TenantPropertyConnection mostUrgentLease = null;
+        int urgencyScore = Integer.MAX_VALUE; // Lower is more urgent
+
+        for (TenantPropertyConnection lease : activeLeases) {
+            // Generate schedule for just the current month
+            var schedule = generateSingleMonthSchedule(lease, currentMonth);
+
+            if (schedule != null) {
+                // Calculate urgency score
+                int score = calculateUrgencyScore(schedule, today);
+
+                // Select most urgent payment with proper tie-breaking
+                boolean shouldReplace = false;
+
+                if (score < urgencyScore) {
+                    // This payment is more urgent by score
+                    shouldReplace = true;
+                } else if (score == urgencyScore && mostUrgentPayment != null) {
+                    // Tie in urgency score - use amount as tie-breaker (higher amount = more urgent)
+                    if (schedule.getTotalAmount().compareTo(mostUrgentPayment.getTotalAmount()) > 0) {
+                        shouldReplace = true;
+                    }
+                }
+
+                if (shouldReplace) {
+                    urgencyScore = score;
+                    mostUrgentPayment = schedule;
+                    mostUrgentLease = lease;
+                }
+            }
+        }
+
+        if (mostUrgentPayment == null) {
+            return null;
+        }
+
+        // Build the response DTO
+        com.bms.backend.dto.response.UrgentPaymentDto response = new com.bms.backend.dto.response.UrgentPaymentDto();
+        response.setPaymentTransactionId(mostUrgentPayment.getPaymentTransactionId());
+        response.setLeaseId(mostUrgentLease.getId());
+        response.setConnectionId(mostUrgentLease.getId()); // Same as leaseId
+        response.setPropertyName(mostUrgentLease.getPropertyName());
+
+        // Build unit description
+        String unitDesc = "To Lease-" + mostUrgentLease.getId().toString().substring(0, 3);
+        if (mostUrgentLease.getApartment() != null) {
+            unitDesc += " • Unit " + mostUrgentLease.getApartment().getUnitNumber();
+        }
+        response.setUnitDescription(unitDesc);
+
+        response.setMonth(mostUrgentPayment.getMonth());
+        response.setDueDate(mostUrgentPayment.getDueDate());
+        response.setRentAmount(mostUrgentPayment.getRentAmount());
+        response.setLateCharges(mostUrgentPayment.getLateCharges());
+        response.setTotalAmount(mostUrgentPayment.getTotalAmount());
+        response.setStatus(mostUrgentPayment.getStatus());
+        response.setTotalActiveLeases(activeLeases.size());
+
+        return response;
+    }
+
+    /**
+     * Generate schedule for a single month
+     */
+    private com.bms.backend.dto.response.LeasePaymentScheduleDto generateSingleMonthSchedule(
+            TenantPropertyConnection connection, java.time.YearMonth month) {
+
+        java.time.LocalDate startDate = connection.getStartDate();
+        java.time.LocalDate endDate = connection.getEndDate();
+        java.time.YearMonth leaseStart = java.time.YearMonth.from(startDate);
+        java.time.YearMonth leaseEnd = java.time.YearMonth.from(endDate);
+
+        // Check if month is within lease period
+        if (month.isBefore(leaseStart) || month.isAfter(leaseEnd)) {
+            return null;
+        }
+
+        // Use LeaseService to generate the schedule
+        var fullSchedule = leaseService.generatePaymentSchedule(connection, month, month);
+        return fullSchedule.isEmpty() ? null : fullSchedule.get(0);
+    }
+
+    /**
+     * Calculate urgency score (lower = more urgent)
+     * Score = (status_weight * 1000) + days_until_due
+     */
+    private int calculateUrgencyScore(com.bms.backend.dto.response.LeasePaymentScheduleDto payment,
+                                      java.time.LocalDate today) {
+        int statusWeight = 0;
+
+        switch (payment.getStatus()) {
+            case "OVERDUE":
+                statusWeight = 0; // Most urgent
+                break;
+            case "PENDING":
+                statusWeight = 1;
+                break;
+            case "PAID":
+                statusWeight = 10; // Least urgent
+                break;
+            default:
+                statusWeight = 5;
+        }
+
+        // Days until due (negative if overdue)
+        long daysUntilDue = java.time.temporal.ChronoUnit.DAYS.between(today, payment.getDueDate());
+
+        return (statusWeight * 1000) + (int) daysUntilDue;
     }
 }

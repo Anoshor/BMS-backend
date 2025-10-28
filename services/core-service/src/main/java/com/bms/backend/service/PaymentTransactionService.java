@@ -161,6 +161,7 @@ public class PaymentTransactionService {
 
     /**
      * Get all payments for a tenant with filters
+     * ONLY returns payments that were actually initiated (have Stripe PaymentIntent ID)
      */
     public List<PaymentTransactionDto> getTenantPayments(User user, PaymentSearchRequest searchRequest) {
         validateTenantAccess(user);
@@ -182,7 +183,10 @@ public class PaymentTransactionService {
             payments = paymentRepository.findByTenantWithDateRange(user, startDate, endDate);
         }
 
+        // FILTER: Only show payments that were actually initiated (have Stripe PaymentIntent ID)
+        // This excludes auto-generated PENDING placeholder records
         return payments.stream()
+                .filter(payment -> payment.getStripePaymentIntentId() != null && !payment.getStripePaymentIntentId().isEmpty())
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
@@ -200,11 +204,16 @@ public class PaymentTransactionService {
 
     /**
      * Get pending payments for a tenant
+     * ONLY returns payments that were actually initiated (have Stripe PaymentIntent ID)
      */
     public List<PaymentTransactionDto> getPendingPayments(User user, Instant startDate, Instant endDate) {
         validateTenantAccess(user);
         List<PaymentTransaction> payments = paymentRepository.findPendingByTenantWithDateRange(user, startDate, endDate);
+
+        // FILTER: Only show payments that were actually initiated (have Stripe PaymentIntent ID)
+        // This excludes auto-generated PENDING placeholder records
         return payments.stream()
+                .filter(payment -> payment.getStripePaymentIntentId() != null && !payment.getStripePaymentIntentId().isEmpty())
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
@@ -236,7 +245,11 @@ public class PaymentTransactionService {
         }
 
         List<PaymentTransaction> payments = paymentRepository.findByConnectionOrderByCreatedAtDesc(connection);
+
+        // FILTER: Only show payments that were actually initiated (have Stripe PaymentIntent ID)
+        // This excludes auto-generated PENDING placeholder records
         return payments.stream()
+                .filter(payment -> payment.getStripePaymentIntentId() != null && !payment.getStripePaymentIntentId().isEmpty())
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }

@@ -450,7 +450,7 @@ public class LeaseService {
      * Generate payment schedule items for a given date range
      * NOW CHECKS ACTUAL PAYMENT RECORDS to determine status
      */
-    private List<LeasePaymentScheduleDto> generatePaymentSchedule(TenantPropertyConnection connection,
+    public List<LeasePaymentScheduleDto> generatePaymentSchedule(TenantPropertyConnection connection,
                                                                    YearMonth start, YearMonth end) {
         List<LeasePaymentScheduleDto> schedule = new ArrayList<>();
 
