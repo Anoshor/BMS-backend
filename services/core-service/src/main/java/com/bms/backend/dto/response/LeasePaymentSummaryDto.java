@@ -18,6 +18,12 @@ public class LeasePaymentSummaryDto {
     @Schema(description = "Property name", example = "Sunset Apartments")
     private String propertyName;
 
+    @Schema(description = "Unit/Apartment ID", example = "04fc37d0-e819-4488-9849-4f237f9b45c1")
+    private UUID unitId;
+
+    @Schema(description = "Unit number", example = "3B")
+    private String unitNumber;
+
     @Schema(description = "Tenant name", example = "John Doe")
     private String tenantName;
 
@@ -26,6 +32,9 @@ public class LeasePaymentSummaryDto {
 
     @Schema(description = "Total pending amount (current + overdue)", example = "1260.00")
     private BigDecimal totalPending;
+
+    @Schema(description = "Total overdue amount (with late charges)", example = "660.00")
+    private BigDecimal overdueAmount;
 
     @Schema(description = "Next payment due date", example = "2024-11-01")
     private LocalDate nextDueDate;
@@ -97,6 +106,14 @@ public class LeasePaymentSummaryDto {
         this.totalPending = totalPending;
     }
 
+    public BigDecimal getOverdueAmount() {
+        return overdueAmount;
+    }
+
+    public void setOverdueAmount(BigDecimal overdueAmount) {
+        this.overdueAmount = overdueAmount;
+    }
+
     public LocalDate getNextDueDate() {
         return nextDueDate;
     }
@@ -143,5 +160,21 @@ public class LeasePaymentSummaryDto {
 
     public void setTotalMonths(int totalMonths) {
         this.totalMonths = totalMonths;
+    }
+
+    public UUID getUnitId() {
+        return unitId;
+    }
+
+    public void setUnitId(UUID unitId) {
+        this.unitId = unitId;
+    }
+
+    public String getUnitNumber() {
+        return unitNumber;
+    }
+
+    public void setUnitNumber(String unitNumber) {
+        this.unitNumber = unitNumber;
     }
 }

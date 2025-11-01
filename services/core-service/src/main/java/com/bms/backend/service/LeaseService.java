@@ -398,34 +398,104 @@ public class LeaseService {
             YearMonth.from(leaseEnd)
         ) + 1;
 
-        // Calculate upcoming payments count
-        YearMonth currentMonth = YearMonth.from(today);
-        YearMonth endMonth = YearMonth.from(leaseEnd);
-        int upcomingCount = 0;
-        if (!currentMonth.isAfter(endMonth)) {
-            upcomingCount = (int) ChronoUnit.MONTHS.between(currentMonth, endMonth) + 1;
-        }
+        // Fetch ALL payment transactions for this connection to calculate real counts
+        var allPayments = paymentTransactionRepository.findByConnectionOrderByCreatedAtDesc(connection);
 
-        // Calculate overdue payments (simplified - assumes payment due on 1st of each month)
-        int overdueCount = 0;
-        BigDecimal totalPending = BigDecimal.ZERO;
+        YearMonth leaseStartMonth = YearMonth.from(leaseStart);
+        YearMonth currentYearMonth = YearMonth.from(today);
+        YearMonth endPeriod = currentYearMonth.plusMonths(2);
 
-        if (today.isAfter(leaseStart)) {
-            // Check if current month payment is overdue (after 5th)
-            if (today.getDayOfMonth() > 5) {
-                overdueCount = 1;
-                totalPending = monthlyRent.add(calculateLatePaymentCharges(connection));
-            } else {
-                // Current month due but not overdue yet
-                totalPending = monthlyRent;
+        // If no payment records exist, create payment records from lease start to current + 2 months
+        // This ensures ALL payments (including overdue ones) are created
+        if (allPayments.isEmpty() || allPayments.stream().noneMatch(p -> p.getDueDate() != null)) {
+            System.out.println("🔄 No payment records found for lease " + leaseId + " - auto-creating from lease start");
+
+            // Generate payment schedule which will auto-create records from lease start
+            generatePaymentSchedule(connection, leaseStartMonth, endPeriod);
+
+            // Fetch again after creating
+            allPayments = paymentTransactionRepository.findByConnectionOrderByCreatedAtDesc(connection);
+        } else {
+            // Check if we have payment records for all months from lease start to current month
+            // If any are missing (especially past months), create them
+            boolean hasMissingPastMonths = false;
+            YearMonth checkMonth = leaseStartMonth;
+
+            while (!checkMonth.isAfter(currentYearMonth)) {
+                final YearMonth monthToCheck = checkMonth;
+                boolean hasRecordForMonth = allPayments.stream()
+                    .anyMatch(p -> {
+                        if (p.getDueDate() != null) {
+                            LocalDate dueDate = LocalDate.ofInstant(p.getDueDate(), java.time.ZoneId.of("UTC"));
+                            return YearMonth.from(dueDate).equals(monthToCheck);
+                        }
+                        return false;
+                    });
+
+                if (!hasRecordForMonth) {
+                    hasMissingPastMonths = true;
+                    break;
+                }
+                checkMonth = checkMonth.plusMonths(1);
+            }
+
+            if (hasMissingPastMonths) {
+                System.out.println("🔄 Missing payment records detected for lease " + leaseId + " - creating missing months from lease start");
+
+                // Generate payment schedule which will auto-create missing records
+                generatePaymentSchedule(connection, leaseStartMonth, endPeriod);
+
+                // Fetch again after creating
+                allPayments = paymentTransactionRepository.findByConnectionOrderByCreatedAtDesc(connection);
             }
         }
 
-        // Next due date (1st of next month or current month if before lease end)
+        // Count ACTUAL overdue and pending payments from database
+        int overdueCount = 0;
+        int upcomingCount = 0;
+        BigDecimal totalPending = BigDecimal.ZERO;
+        BigDecimal overdueAmount = BigDecimal.ZERO;
         LocalDate nextDueDate = null;
-        if (!today.isAfter(leaseEnd)) {
-            YearMonth nextPaymentMonth = currentMonth;
-            nextDueDate = nextPaymentMonth.atDay(1);
+
+        YearMonth currentMonth = YearMonth.from(today);
+
+        for (var payment : allPayments) {
+            if (payment.getDueDate() == null) continue;
+
+            LocalDate paymentDueDate = LocalDate.ofInstant(payment.getDueDate(), java.time.ZoneId.of("UTC"));
+            YearMonth paymentMonth = YearMonth.from(paymentDueDate);
+
+            // Skip PAID payments
+            if (payment.getStatus() == com.bms.backend.entity.PaymentTransaction.PaymentStatus.PAID) {
+                continue;
+            }
+
+            // Determine if payment is overdue
+            boolean isOverdue = false;
+            if (paymentMonth.isBefore(currentMonth)) {
+                isOverdue = true;
+            } else if (paymentMonth.equals(currentMonth) && today.getDayOfMonth() > 5) {
+                isOverdue = true;
+            }
+
+            if (isOverdue) {
+                overdueCount++;
+                BigDecimal lateCharges = monthlyRent.multiply(BigDecimal.valueOf(0.10))
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+                BigDecimal paymentWithLateCharges = payment.getAmount().add(lateCharges);
+                totalPending = totalPending.add(paymentWithLateCharges);
+                overdueAmount = overdueAmount.add(paymentWithLateCharges);
+            } else if (!paymentMonth.isBefore(currentMonth)) {
+                // Future or current month not yet overdue
+                upcomingCount++;
+                if (nextDueDate == null || paymentDueDate.isBefore(nextDueDate)) {
+                    nextDueDate = paymentDueDate;
+                }
+                // Only add current month to total pending if not overdue
+                if (paymentMonth.equals(currentMonth)) {
+                    totalPending = totalPending.add(payment.getAmount());
+                }
+            }
         }
 
         // Build summary
@@ -436,12 +506,19 @@ public class LeaseService {
         summary.setTenantName(connection.getTenant().getFirstName() + " " + connection.getTenant().getLastName());
         summary.setMonthlyRent(monthlyRent);
         summary.setTotalPending(totalPending);
+        summary.setOverdueAmount(overdueAmount);
         summary.setNextDueDate(nextDueDate);
         summary.setUpcomingPaymentsCount(upcomingCount);
         summary.setOverduePaymentsCount(overdueCount);
         summary.setLeaseStartDate(leaseStart);
         summary.setLeaseEndDate(leaseEnd);
         summary.setTotalMonths(totalMonths);
+
+        // Set unit information
+        if (connection.getApartment() != null) {
+            summary.setUnitId(connection.getApartment().getId());
+            summary.setUnitNumber(connection.getApartment().getUnitNumber());
+        }
 
         return summary;
     }

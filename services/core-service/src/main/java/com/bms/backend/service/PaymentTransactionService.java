@@ -171,6 +171,9 @@ public class PaymentTransactionService {
         Instant endDate = searchRequest != null ? searchRequest.getEndDate() : null;
         String status = searchRequest != null ? searchRequest.getStatus() : "ALL";
 
+        System.out.println("🔍 getTenantPayments called with status: " + status);
+        System.out.println("   User: " + user.getId() + ", startDate: " + startDate + ", endDate: " + endDate);
+
         if (status == null || "ALL".equalsIgnoreCase(status)) {
             payments = paymentRepository.findByTenantWithDateRange(user, startDate, endDate);
         } else if ("PAID".equalsIgnoreCase(status)) {
@@ -178,15 +181,22 @@ public class PaymentTransactionService {
         } else if ("PENDING".equalsIgnoreCase(status)) {
             payments = paymentRepository.findPendingByTenantWithDateRange(user, startDate, endDate);
         } else if ("OVERDUE".equalsIgnoreCase(status)) {
+            System.out.println("   🚨 OVERDUE filter requested! Calling findOverdueByTenantWithDateRange...");
+            System.out.println("   currentDate (for overdue check): " + Instant.now());
             payments = paymentRepository.findOverdueByTenantWithDateRange(user, Instant.now(), startDate, endDate);
+            System.out.println("   Found " + payments.size() + " overdue payment records");
+            for (PaymentTransaction payment : payments) {
+                System.out.println("      - ID: " + payment.getId() + ", Status: " + payment.getStatus() +
+                                 ", Due: " + payment.getDueDate() + ", Amount: " + payment.getAmount());
+            }
         } else {
             payments = paymentRepository.findByTenantWithDateRange(user, startDate, endDate);
         }
 
-        // FILTER: Only show payments that were actually initiated (have Stripe PaymentIntent ID)
-        // This excludes auto-generated PENDING placeholder records
+        System.out.println("   Total payments returned: " + payments.size());
+
+        // Return all payment records (including auto-generated ones for rent tracking)
         return payments.stream()
-                .filter(payment -> payment.getStripePaymentIntentId() != null && !payment.getStripePaymentIntentId().isEmpty())
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
@@ -204,16 +214,14 @@ public class PaymentTransactionService {
 
     /**
      * Get pending payments for a tenant
-     * ONLY returns payments that were actually initiated (have Stripe PaymentIntent ID)
+     * Returns all pending payments including auto-generated rent payment records
      */
     public List<PaymentTransactionDto> getPendingPayments(User user, Instant startDate, Instant endDate) {
         validateTenantAccess(user);
         List<PaymentTransaction> payments = paymentRepository.findPendingByTenantWithDateRange(user, startDate, endDate);
 
-        // FILTER: Only show payments that were actually initiated (have Stripe PaymentIntent ID)
-        // This excludes auto-generated PENDING placeholder records
+        // Return all pending payment records (including auto-generated ones for rent tracking)
         return payments.stream()
-                .filter(payment -> payment.getStripePaymentIntentId() != null && !payment.getStripePaymentIntentId().isEmpty())
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
@@ -222,9 +230,20 @@ public class PaymentTransactionService {
      * Get overdue payments for a tenant
      */
     public List<PaymentTransactionDto> getOverduePayments(User user, Instant startDate, Instant endDate) {
+        System.out.println("🔍 getOverduePayments called for user: " + user.getId());
+        System.out.println("   startDate: " + startDate + ", endDate: " + endDate);
+        System.out.println("   currentDate (for overdue check): " + Instant.now());
+
         validateTenantAccess(user);
         List<PaymentTransaction> payments = paymentRepository.findOverdueByTenantWithDateRange(
                 user, Instant.now(), startDate, endDate);
+
+        System.out.println("   Found " + payments.size() + " overdue payment records");
+        for (PaymentTransaction payment : payments) {
+            System.out.println("      - ID: " + payment.getId() + ", Status: " + payment.getStatus() +
+                             ", Due: " + payment.getDueDate() + ", Amount: " + payment.getAmount());
+        }
+
         return payments.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
@@ -246,10 +265,8 @@ public class PaymentTransactionService {
 
         List<PaymentTransaction> payments = paymentRepository.findByConnectionOrderByCreatedAtDesc(connection);
 
-        // FILTER: Only show payments that were actually initiated (have Stripe PaymentIntent ID)
-        // This excludes auto-generated PENDING placeholder records
+        // Return all payment records (including auto-generated ones for rent tracking)
         return payments.stream()
-                .filter(payment -> payment.getStripePaymentIntentId() != null && !payment.getStripePaymentIntentId().isEmpty())
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }

@@ -33,6 +33,10 @@ public class MaintenanceDetailsResponse {
     private String landlordName;
     private String landlordEmail;
     private String landlordPhone;
+    private String landlordProfileImageUrl;
+
+    // Property information
+    private String propertyAddress;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "UTC")
     private Instant submittedAt;
@@ -99,12 +103,21 @@ public class MaintenanceDetailsResponse {
         }
 
         // Landlord (Property Manager) info
-        if (request.getApartment() != null && request.getApartment().getProperty() != null && request.getApartment().getProperty().getManager() != null) {
-            var manager = request.getApartment().getProperty().getManager();
-            this.landlordId = manager.getId();
-            this.landlordName = manager.getFirstName() + " " + manager.getLastName();
-            this.landlordEmail = manager.getEmail();
-            this.landlordPhone = manager.getPhone();
+        if (request.getApartment() != null && request.getApartment().getProperty() != null) {
+            var property = request.getApartment().getProperty();
+
+            // Set property address
+            this.propertyAddress = property.getAddress();
+
+            // Set manager info
+            if (property.getManager() != null) {
+                var manager = property.getManager();
+                this.landlordId = manager.getId();
+                this.landlordName = manager.getFirstName() + " " + manager.getLastName();
+                this.landlordEmail = manager.getEmail();
+                this.landlordPhone = manager.getPhone();
+                this.landlordProfileImageUrl = manager.getProfileImageUrl();
+            }
         }
 
         this.submittedAt = request.getSubmittedAt();
@@ -354,5 +367,21 @@ public class MaintenanceDetailsResponse {
 
     public void setLandlordPhone(String landlordPhone) {
         this.landlordPhone = landlordPhone;
+    }
+
+    public String getLandlordProfileImageUrl() {
+        return landlordProfileImageUrl;
+    }
+
+    public void setLandlordProfileImageUrl(String landlordProfileImageUrl) {
+        this.landlordProfileImageUrl = landlordProfileImageUrl;
+    }
+
+    public String getPropertyAddress() {
+        return propertyAddress;
+    }
+
+    public void setPropertyAddress(String propertyAddress) {
+        this.propertyAddress = propertyAddress;
     }
 }

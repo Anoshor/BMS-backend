@@ -157,17 +157,22 @@ public class PaymentTransactionController {
     public ResponseEntity<ApiResponse<List<PaymentTransactionDto>>> getOverduePayments(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate) {
+        System.out.println("🎯 CONTROLLER: /api/v1/payments/overdue endpoint called!");
+        System.out.println("   startDate: " + startDate + ", endDate: " + endDate);
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
 
             List<PaymentTransactionDto> payments = paymentService.getOverduePayments(user, startDate, endDate);
+            System.out.println("   Returning " + payments.size() + " overdue payments to UI");
             return ResponseEntity.ok(new ApiResponse<>(true, payments,
                     "Overdue transactions retrieved successfully"));
         } catch (IllegalArgumentException e) {
+            System.out.println("   ❌ ERROR: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ApiResponse<>(false, null, e.getMessage()));
         } catch (Exception e) {
+            System.out.println("   ❌ ERROR: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, null,
                             "Failed to retrieve overdue transactions: " + e.getMessage()));

@@ -42,7 +42,7 @@ public class TenantService {
     private PaymentTransactionService paymentTransactionService;
 
     @Autowired
-    private LeaseService leaseService;
+    private PaymentTransactionRepository paymentTransactionRepository;
 
     public TenantPropertyConnection connectTenantToProperty(User manager, ConnectTenantRequest request) {
         // Validate manager
@@ -547,19 +547,18 @@ public class TenantService {
             return null; // No active leases
         }
 
-        // For each lease, get the next payment due
+        // For each lease, find the most urgent unpaid payment
         java.time.LocalDate today = java.time.LocalDate.now();
-        java.time.YearMonth currentMonth = java.time.YearMonth.now();
 
         com.bms.backend.dto.response.LeasePaymentScheduleDto mostUrgentPayment = null;
         TenantPropertyConnection mostUrgentLease = null;
         int urgencyScore = Integer.MAX_VALUE; // Lower is more urgent
 
         for (TenantPropertyConnection lease : activeLeases) {
-            // Generate schedule for just the current month
-            var schedule = generateSingleMonthSchedule(lease, currentMonth);
+            // Find the most urgent unpaid payment for this lease
+            var schedule = findMostUrgentUnpaidPayment(lease, today);
 
-            if (schedule != null) {
+            if (schedule != null && !"PAID".equals(schedule.getStatus())) {
                 // Calculate urgency score
                 int score = calculateUrgencyScore(schedule, today);
 
@@ -614,7 +613,98 @@ public class TenantService {
     }
 
     /**
-     * Generate schedule for a single month
+     * Find the most urgent unpaid payment for a lease
+     * Priority: OVERDUE > PENDING (sorted by due date)
+     */
+    private com.bms.backend.dto.response.LeasePaymentScheduleDto findMostUrgentUnpaidPayment(
+            TenantPropertyConnection connection, java.time.LocalDate today) {
+
+        // Get all payment transactions for this connection
+        var allPayments = paymentTransactionRepository.findByConnectionOrderByCreatedAtDesc(connection);
+
+        // Find the most urgent unpaid payment
+        com.bms.backend.entity.PaymentTransaction mostUrgentPayment = null;
+        boolean foundOverdue = false;
+
+        for (var payment : allPayments) {
+            if (payment.getDueDate() == null) continue;
+
+            // Skip PAID payments
+            if (payment.getStatus() == com.bms.backend.entity.PaymentTransaction.PaymentStatus.PAID) {
+                continue;
+            }
+
+            java.time.LocalDate paymentDueDate = java.time.LocalDate.ofInstant(
+                payment.getDueDate(), java.time.ZoneId.of("UTC"));
+            java.time.YearMonth paymentMonth = java.time.YearMonth.from(paymentDueDate);
+            java.time.YearMonth currentMonth = java.time.YearMonth.from(today);
+
+            // Determine if overdue
+            boolean isOverdue = false;
+            if (paymentMonth.isBefore(currentMonth)) {
+                isOverdue = true;
+            } else if (paymentMonth.equals(currentMonth) && today.getDayOfMonth() > 5) {
+                isOverdue = true;
+            }
+
+            // Priority: Overdue first, then earliest pending
+            if (isOverdue) {
+                if (!foundOverdue || paymentDueDate.isBefore(
+                        java.time.LocalDate.ofInstant(mostUrgentPayment.getDueDate(), java.time.ZoneId.of("UTC")))) {
+                    mostUrgentPayment = payment;
+                    foundOverdue = true;
+                }
+            } else if (!foundOverdue) {
+                // Only consider pending if no overdue found
+                if (mostUrgentPayment == null || paymentDueDate.isBefore(
+                        java.time.LocalDate.ofInstant(mostUrgentPayment.getDueDate(), java.time.ZoneId.of("UTC")))) {
+                    mostUrgentPayment = payment;
+                }
+            }
+        }
+
+        if (mostUrgentPayment == null) {
+            return null;
+        }
+
+        // Convert to DTO
+        java.time.LocalDate dueDate = java.time.LocalDate.ofInstant(
+            mostUrgentPayment.getDueDate(), java.time.ZoneId.of("UTC"));
+        java.time.YearMonth paymentMonth = java.time.YearMonth.from(dueDate);
+        java.time.YearMonth currentMonth = java.time.YearMonth.from(today);
+
+        // Determine status
+        String status;
+        java.math.BigDecimal lateCharges = java.math.BigDecimal.ZERO;
+
+        if (paymentMonth.isBefore(currentMonth)) {
+            status = "OVERDUE";
+            lateCharges = mostUrgentPayment.getAmount().multiply(java.math.BigDecimal.valueOf(0.10))
+                .setScale(2, java.math.RoundingMode.HALF_UP);
+        } else if (paymentMonth.equals(currentMonth) && today.getDayOfMonth() > 5) {
+            status = "OVERDUE";
+            lateCharges = mostUrgentPayment.getAmount().multiply(java.math.BigDecimal.valueOf(0.10))
+                .setScale(2, java.math.RoundingMode.HALF_UP);
+        } else {
+            status = "PENDING";
+        }
+
+        // Build DTO
+        com.bms.backend.dto.response.LeasePaymentScheduleDto schedule =
+            new com.bms.backend.dto.response.LeasePaymentScheduleDto();
+        schedule.setPaymentTransactionId(mostUrgentPayment.getId());
+        schedule.setMonth(paymentMonth.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")));
+        schedule.setDueDate(dueDate);
+        schedule.setRentAmount(mostUrgentPayment.getAmount());
+        schedule.setLateCharges(lateCharges);
+        schedule.setTotalAmount(mostUrgentPayment.getAmount().add(lateCharges));
+        schedule.setStatus(status);
+
+        return schedule;
+    }
+
+    /**
+     * Generate schedule for a single month (simplified version for urgent payment)
      */
     private com.bms.backend.dto.response.LeasePaymentScheduleDto generateSingleMonthSchedule(
             TenantPropertyConnection connection, java.time.YearMonth month) {
@@ -629,9 +719,80 @@ public class TenantService {
             return null;
         }
 
-        // Use LeaseService to generate the schedule
-        var fullSchedule = leaseService.generatePaymentSchedule(connection, month, month);
-        return fullSchedule.isEmpty() ? null : fullSchedule.get(0);
+        // Get payment transactions for this connection
+        var paymentTransactions = paymentTransactionRepository.findByConnectionOrderByCreatedAtDesc(connection);
+
+        // Find or create payment record for this month
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate dueDate = month.atDay(1);
+        java.math.BigDecimal monthlyRent = java.math.BigDecimal.valueOf(connection.getMonthlyRent());
+
+        // Check if payment exists for this month
+        final java.time.YearMonth monthToCheck = month;
+        var matchingPayment = paymentTransactions.stream()
+            .filter(payment -> {
+                java.time.Instant dueDateInstant = payment.getDueDate();
+                if (dueDateInstant != null) {
+                    java.time.LocalDate paymentDueDate = java.time.LocalDate.ofInstant(dueDateInstant, java.time.ZoneId.of("UTC"));
+                    java.time.YearMonth paymentMonth = java.time.YearMonth.from(paymentDueDate);
+                    return paymentMonth.equals(monthToCheck);
+                }
+                return false;
+            })
+            .findFirst();
+
+        // Create payment record if doesn't exist
+        if (matchingPayment.isEmpty()) {
+            com.bms.backend.entity.PaymentTransaction newPayment = new com.bms.backend.entity.PaymentTransaction();
+            newPayment.setTenant(connection.getTenant());
+            newPayment.setConnection(connection);
+            newPayment.setAmount(monthlyRent);
+            newPayment.setCurrency("USD");
+            newPayment.setStatus(com.bms.backend.entity.PaymentTransaction.PaymentStatus.PENDING);
+            newPayment.setDescription("Monthly rent for " + connection.getPropertyName() + " - " + month);
+            newPayment.setDueDate(dueDate.atStartOfDay(java.time.ZoneId.of("UTC")).toInstant());
+            newPayment = paymentTransactionRepository.save(newPayment);
+            matchingPayment = java.util.Optional.of(newPayment);
+        }
+
+        // Check if paid
+        boolean isPaid = matchingPayment.isPresent() &&
+            matchingPayment.get().getStatus() == com.bms.backend.entity.PaymentTransaction.PaymentStatus.PAID;
+
+        // Determine status
+        String status;
+        java.math.BigDecimal lateCharges = java.math.BigDecimal.ZERO;
+
+        if (isPaid) {
+            status = "PAID";
+        } else if (month.isBefore(java.time.YearMonth.now())) {
+            status = "OVERDUE";
+            lateCharges = monthlyRent.multiply(java.math.BigDecimal.valueOf(0.10))
+                .setScale(2, java.math.RoundingMode.HALF_UP);
+        } else if (month.equals(java.time.YearMonth.now())) {
+            if (today.getDayOfMonth() > 5) {
+                status = "OVERDUE";
+                lateCharges = monthlyRent.multiply(java.math.BigDecimal.valueOf(0.10))
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+            } else {
+                status = "PENDING";
+            }
+        } else {
+            status = "PENDING";
+        }
+
+        // Build DTO
+        com.bms.backend.dto.response.LeasePaymentScheduleDto schedule =
+            new com.bms.backend.dto.response.LeasePaymentScheduleDto();
+        schedule.setPaymentTransactionId(matchingPayment.get().getId());
+        schedule.setMonth(month.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")));
+        schedule.setDueDate(dueDate);
+        schedule.setRentAmount(monthlyRent);
+        schedule.setLateCharges(lateCharges);
+        schedule.setTotalAmount(monthlyRent.add(lateCharges));
+        schedule.setStatus(status);
+
+        return schedule;
     }
 
     /**
