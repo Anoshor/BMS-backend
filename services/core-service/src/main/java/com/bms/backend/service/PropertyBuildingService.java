@@ -123,10 +123,20 @@ PropertyBuildingService {
 
             // Handle images - if provided, update property images
             if (request.getImages() != null) {
-                // Delete existing images first
+                // Delete existing images first (from both DB and S3)
                 List<com.bms.backend.entity.PropertyImage> existingImages =
                     propertyImageRepository.findByProperty(property);
                 if (!existingImages.isEmpty()) {
+                    // Delete from S3 first
+                    for (com.bms.backend.entity.PropertyImage image : existingImages) {
+                        try {
+                            s3Service.deleteFile(image.getImageUrl());
+                        } catch (Exception e) {
+                            // Log error but continue - image might not exist in S3
+                            System.err.println("Failed to delete image from S3: " + image.getImageUrl() + " - " + e.getMessage());
+                        }
+                    }
+                    // Then delete from database
                     propertyImageRepository.deleteAll(existingImages);
                 }
 

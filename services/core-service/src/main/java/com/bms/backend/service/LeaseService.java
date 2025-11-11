@@ -34,6 +34,7 @@ public class LeaseService {
     private TenantPropertyConnectionRepository connectionRepository;
 
     @Autowired
+    @org.springframework.context.annotation.Lazy
     private TenantService tenantService;
 
     @Autowired
@@ -405,50 +406,12 @@ public class LeaseService {
         YearMonth currentYearMonth = YearMonth.from(today);
         YearMonth endPeriod = currentYearMonth.plusMonths(2);
 
-        // If no payment records exist, create payment records from lease start to current + 2 months
-        // This ensures ALL payments (including overdue ones) are created
-        if (allPayments.isEmpty() || allPayments.stream().noneMatch(p -> p.getDueDate() != null)) {
-            System.out.println("🔄 No payment records found for lease " + leaseId + " - auto-creating from lease start");
+        // Ensure payment records exist for all months from lease start to current + 2 months
+        // This is optimized to create missing records in bulk
+        ensurePaymentRecordsExist(connection, leaseStartMonth, endPeriod, allPayments);
 
-            // Generate payment schedule which will auto-create records from lease start
-            generatePaymentSchedule(connection, leaseStartMonth, endPeriod);
-
-            // Fetch again after creating
-            allPayments = paymentTransactionRepository.findByConnectionOrderByCreatedAtDesc(connection);
-        } else {
-            // Check if we have payment records for all months from lease start to current month
-            // If any are missing (especially past months), create them
-            boolean hasMissingPastMonths = false;
-            YearMonth checkMonth = leaseStartMonth;
-
-            while (!checkMonth.isAfter(currentYearMonth)) {
-                final YearMonth monthToCheck = checkMonth;
-                boolean hasRecordForMonth = allPayments.stream()
-                    .anyMatch(p -> {
-                        if (p.getDueDate() != null) {
-                            LocalDate dueDate = LocalDate.ofInstant(p.getDueDate(), java.time.ZoneId.of("UTC"));
-                            return YearMonth.from(dueDate).equals(monthToCheck);
-                        }
-                        return false;
-                    });
-
-                if (!hasRecordForMonth) {
-                    hasMissingPastMonths = true;
-                    break;
-                }
-                checkMonth = checkMonth.plusMonths(1);
-            }
-
-            if (hasMissingPastMonths) {
-                System.out.println("🔄 Missing payment records detected for lease " + leaseId + " - creating missing months from lease start");
-
-                // Generate payment schedule which will auto-create missing records
-                generatePaymentSchedule(connection, leaseStartMonth, endPeriod);
-
-                // Fetch again after creating
-                allPayments = paymentTransactionRepository.findByConnectionOrderByCreatedAtDesc(connection);
-            }
-        }
+        // Fetch again after ensuring records exist
+        allPayments = paymentTransactionRepository.findByConnectionOrderByCreatedAtDesc(connection);
 
         // Count ACTUAL overdue and pending payments from database
         int overdueCount = 0;
@@ -724,6 +687,54 @@ public class LeaseService {
             return "EXPIRED";
         } else {
             return "ACTIVE";
+        }
+    }
+
+    /**
+     * Optimized method to ensure payment records exist for a given date range
+     * Creates missing records in bulk to improve performance
+     */
+    private void ensurePaymentRecordsExist(TenantPropertyConnection connection,
+                                          YearMonth start, YearMonth end,
+                                          List<com.bms.backend.entity.PaymentTransaction> existingPayments) {
+        // Build a set of existing payment months for fast lookup
+        java.util.Set<YearMonth> existingMonths = existingPayments.stream()
+            .filter(p -> p.getDueDate() != null)
+            .map(p -> YearMonth.from(LocalDate.ofInstant(p.getDueDate(), java.time.ZoneId.of("UTC"))))
+            .collect(java.util.stream.Collectors.toSet());
+
+        // Collect missing months
+        List<com.bms.backend.entity.PaymentTransaction> newPayments = new ArrayList<>();
+        BigDecimal monthlyRent = BigDecimal.valueOf(connection.getMonthlyRent());
+        YearMonth leaseEndMonth = YearMonth.from(connection.getEndDate());
+
+        YearMonth current = start;
+        while (!current.isAfter(end) && !current.isAfter(leaseEndMonth)) {
+            if (!existingMonths.contains(current)) {
+                // Create new payment record
+                com.bms.backend.entity.PaymentTransaction newPayment = new com.bms.backend.entity.PaymentTransaction();
+                newPayment.setTenant(connection.getTenant());
+                newPayment.setConnection(connection);
+                newPayment.setAmount(monthlyRent);
+                newPayment.setCurrency("USD");
+                newPayment.setStatus(com.bms.backend.entity.PaymentTransaction.PaymentStatus.PENDING);
+                newPayment.setDescription("Monthly rent for " + connection.getPropertyName() + " - " +
+                    current.getMonth() + " " + current.getYear());
+
+                // Set due date to 1st of the month in UTC
+                LocalDate dueDate = current.atDay(1);
+                Instant dueDateInstant = dueDate.atStartOfDay(java.time.ZoneId.of("UTC")).toInstant();
+                newPayment.setDueDate(dueDateInstant);
+
+                newPayments.add(newPayment);
+            }
+            current = current.plusMonths(1);
+        }
+
+        // Bulk save all new payment records
+        if (!newPayments.isEmpty()) {
+            paymentTransactionRepository.saveAll(newPayments);
+            System.out.println("✅ Created " + newPayments.size() + " payment records in bulk for lease " + connection.getId());
         }
     }
 }

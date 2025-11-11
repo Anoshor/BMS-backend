@@ -44,6 +44,10 @@ public class TenantService {
     @Autowired
     private PaymentTransactionRepository paymentTransactionRepository;
 
+    @Autowired
+    @org.springframework.context.annotation.Lazy
+    private com.bms.backend.service.LeaseService leaseService;
+
     public TenantPropertyConnection connectTenantToProperty(User manager, ConnectTenantRequest request) {
         // Validate manager
         if (manager.getRole() != UserRole.PROPERTY_MANAGER) {
@@ -621,6 +625,20 @@ public class TenantService {
 
         // Get all payment transactions for this connection
         var allPayments = paymentTransactionRepository.findByConnectionOrderByCreatedAtDesc(connection);
+
+        // If no payment records exist, auto-create them (same as payment summary)
+        if (allPayments.isEmpty() || allPayments.stream().noneMatch(p -> p.getDueDate() != null)) {
+            System.out.println("🔄 No payment records found for lease " + connection.getId() + " - auto-creating for urgent payment");
+            java.time.YearMonth leaseStartMonth = java.time.YearMonth.from(connection.getStartDate());
+            java.time.YearMonth currentYearMonth = java.time.YearMonth.from(today);
+            java.time.YearMonth endPeriod = currentYearMonth.plusMonths(2);
+
+            // Generate payment schedule which will auto-create records from lease start
+            leaseService.generatePaymentSchedule(connection, leaseStartMonth, endPeriod);
+
+            // Fetch again after creating
+            allPayments = paymentTransactionRepository.findByConnectionOrderByCreatedAtDesc(connection);
+        }
 
         // Find the most urgent unpaid payment
         com.bms.backend.entity.PaymentTransaction mostUrgentPayment = null;
