@@ -238,6 +238,37 @@ public class ApartmentService {
 
         // Handle images - convert List<String> to JSON string
         if (request.getImages() != null) {
+            // Get existing images to delete from S3
+            List<String> existingImageUrls = new java.util.ArrayList<>();
+            if (apartment.getImages() != null && !apartment.getImages().trim().isEmpty()) {
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    existingImageUrls = mapper.readValue(
+                        apartment.getImages(),
+                        new com.fasterxml.jackson.core.type.TypeReference<java.util.List<String>>() {}
+                    );
+                } catch (Exception e) {
+                    // If deserialization fails, log and continue
+                    System.err.println("Failed to deserialize existing images: " + e.getMessage());
+                }
+            }
+
+            // Find images to delete (images in old list but not in new list)
+            List<String> imagesToDelete = new java.util.ArrayList<>(existingImageUrls);
+            imagesToDelete.removeAll(request.getImages());
+
+            // Delete removed images from S3
+            for (String imageUrl : imagesToDelete) {
+                try {
+                    s3Service.deleteFile(imageUrl);
+                    System.out.println("✅ Deleted image from S3: " + imageUrl);
+                } catch (Exception e) {
+                    // Log error but continue - image might not exist in S3
+                    System.err.println("Failed to delete image from S3: " + imageUrl + " - " + e.getMessage());
+                }
+            }
+
+            // Update with new images
             if (request.getImages().isEmpty()) {
                 // Empty array means remove all images
                 apartment.setImages(null);
@@ -270,7 +301,29 @@ public class ApartmentService {
 
         Apartment apt = apartment.get();
 
-        // First, delete all tenant connections for this apartment
+        // Delete all images from S3 before deleting the apartment
+        if (apt.getImages() != null && !apt.getImages().trim().isEmpty()) {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                List<String> imageUrls = mapper.readValue(
+                    apt.getImages(),
+                    new com.fasterxml.jackson.core.type.TypeReference<java.util.List<String>>() {}
+                );
+
+                for (String imageUrl : imageUrls) {
+                    try {
+                        s3Service.deleteFile(imageUrl);
+                        System.out.println("✅ Deleted apartment image from S3: " + imageUrl);
+                    } catch (Exception e) {
+                        System.err.println("Failed to delete apartment image from S3: " + imageUrl + " - " + e.getMessage());
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to deserialize apartment images for deletion: " + e.getMessage());
+            }
+        }
+
+        // Delete all tenant connections for this apartment
         List<com.bms.backend.entity.TenantPropertyConnection> connections =
             connectionRepository.findByApartment(apt);
 
