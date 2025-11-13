@@ -41,7 +41,10 @@ public class UserService {
     
     @Autowired
     private OtpService otpService;
-    
+
+    @Autowired
+    private S3Service s3Service;
+
     public User createUser(SignupRequest request) {
         validateSignupRequest(request);
         
@@ -352,11 +355,23 @@ public class UserService {
         if (request.getLastName() != null) {
             user.setLastName(request.getLastName());
         }
-        
+
+        // Handle profile image update
         if (request.getProfileImageUrl() != null) {
+            // Delete old profile image from S3 if it exists and is different
+            String oldProfileImage = user.getProfileImageUrl();
+            if (oldProfileImage != null && !oldProfileImage.equals(request.getProfileImageUrl())) {
+                try {
+                    s3Service.deleteFile(oldProfileImage);
+                    System.out.println("✅ Deleted old profile image from S3: " + oldProfileImage);
+                } catch (Exception e) {
+                    // Log error but continue - old image might not exist in S3
+                    System.err.println("Failed to delete old profile image from S3: " + oldProfileImage + " - " + e.getMessage());
+                }
+            }
             user.setProfileImageUrl(request.getProfileImageUrl());
         }
-        
+
         // Update date of birth
         if (request.getDateOfBirth() != null) {
             user.setDateOfBirth(request.getDateOfBirth());
