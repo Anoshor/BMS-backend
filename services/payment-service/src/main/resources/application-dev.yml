@@ -1,0 +1,25 @@
+server:
+  port: 8082
+
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/bms_payment_db
+    username: bms_user
+    password: bms_password
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+stripe:
+  secret:
+    key: ${STRIPE_SECRET_KEY}
+  publishable:
+    key: ${STRIPE_PUBLISHABLE_KEY}
+  webhook:
+    secret: ${STRIPE_WEBHOOK_SECRET}
+
+logging:
+  level:
+    com.bms.payment: DEBUG

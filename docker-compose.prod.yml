@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  # Core Service
+  bms-core-service:
+    image: anoshorpaul/bms-core-service:latest
+    container_name: bms-core-service
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-core:5432/bms_core
+      - SPRING_DATASOURCE_USERNAME=bms_user
+      - SPRING_DATASOURCE_PASSWORD=bms_password
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ACCESS_TOKEN_EXPIRATION=${JWT_ACCESS_TOKEN_EXPIRATION:-900}
+      - JWT_REFRESH_TOKEN_EXPIRATION=${JWT_REFRESH_TOKEN_EXPIRATION:-2592000}
+      - AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME}
+      - AWS_S3_REGION=${AWS_S3_REGION}
+      - AWS_S3_ACCESS_KEY=${AWS_S3_ACCESS_KEY}
+      - AWS_S3_SECRET_KEY=${AWS_S3_SECRET_KEY}
+      - AWS_S3_BASE_URL=${AWS_S3_BASE_URL}
+      - AWS_CLOUDFRONT_DOMAIN=${AWS_CLOUDFRONT_DOMAIN}
+      - AWS_CLOUDFRONT_ENABLED=${AWS_CLOUDFRONT_ENABLED:-true}
+    depends_on:
+      postgres-core:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - bms-network
+
+  # Payment Service
+  bms-payment-service:
+    image: anoshorpaul/bms-payment-service:latest
+    container_name: bms-payment-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-payment:5432/bms_payment_db
+      - SPRING_DATASOURCE_USERNAME=bms_user
+      - SPRING_DATASOURCE_PASSWORD=bms_password
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - CORE_SERVICE_URL=http://bms-core-service:8080
+    depends_on:
+      postgres-payment:
+        condition: service_healthy
+      bms-core-service:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - bms-network
+
+  # PostgreSQL Database for Core Service
+  postgres-core:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=bms_core
+      - POSTGRES_USER=bms_user
+      - POSTGRES_PASSWORD=bms_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_core_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bms_user -d bms_core"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bms-network
+
+  # PostgreSQL Database for Payment Service
+  postgres-payment:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=bms_payment_db
+      - POSTGRES_USER=bms_user
+      - POSTGRES_PASSWORD=bms_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_payment_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bms_user -d bms_payment_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bms-network
+
+  # Redis for caching and message queues
+  redis:
+    image: redis:7.0-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - bms-network
+
+volumes:
+  postgres_core_data:
+  postgres_payment_data:
+  redis_data:
+
+networks:
+  bms-network:
+    driver: bridge

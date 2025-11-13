@@ -9,15 +9,19 @@
         <outputRelativeToContentRoot value="true" />
         <module name="bms-backend (1)" />
         <module name="shared-services" />
-        <module name="notification-service" />
+        <module name="payment-service" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="notification-service" target="17" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="bms-backend" options="" />
       <module name="bms-backend (1)" options="-parameters" />
       <module name="notification-service" options="-parameters" />
+      <module name="payment-service" options="-parameters" />
       <module name="shared-services" options="-parameters" />
     </option>
   </component>

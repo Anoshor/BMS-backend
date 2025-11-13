@@ -14,7 +14,8 @@
 
     <modules>
         <module>services/core-service</module>
-        <module>services/notification-service</module>
+        <!--<module>services/notification-service</module>-->
+        <module>services/payment-service</module>
         <module>shared-services</module>
     </modules>
 

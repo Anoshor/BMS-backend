@@ -188,4 +188,31 @@ public class TenantController {
                     .body(ApiResponse.error("Failed to retrieve tenant details"));
         }
     }
+
+    /**
+     * Get most urgent payment across all tenant's leases
+     * This endpoint returns the payment that needs most immediate attention
+     */
+    @GetMapping("/urgent-payment")
+    public ResponseEntity<ApiResponse<com.bms.backend.dto.response.UrgentPaymentDto>> getMostUrgentPayment() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User tenant = (User) authentication.getPrincipal();
+
+            com.bms.backend.dto.response.UrgentPaymentDto urgentPayment = tenantService.getMostUrgentPayment(tenant);
+
+            if (urgentPayment == null) {
+                return ResponseEntity.ok(ApiResponse.success(null, "No active leases found"));
+            }
+
+            return ResponseEntity.ok(ApiResponse.success(urgentPayment, "Most urgent payment retrieved successfully"));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to retrieve urgent payment: " + e.getMessage()));
+        }
+    }
 }

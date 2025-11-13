@@ -1,0 +1,90 @@
+# ========================================
+# BMS Backend - Production Deployment
+# ========================================
+# This file is for deploying the pre-built Docker image
+# pulled from Docker Hub (anoshorpaul/bms-backend:latest)
+#
+# Instructions for receiver:
+# 1. Create a .env file with your credentials (see .env.example)
+# 2. Run: docker-compose -f docker-compose-deployment.yml up -d
+# ========================================
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: bms-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: bms_core
+      POSTGRES_USER: bms_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bms_password}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bms_user -d bms_core"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bms-network
+
+  # BMS Core Service
+  bms-core:
+    image: anoshorpaul/bms-backend:latest
+    container_name: bms-core-service
+    ports:
+      - "8080:8080"
+    environment:
+      # Spring Profile
+      - SPRING_PROFILES_ACTIVE=docker
+
+      # PostgreSQL Database Configuration
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/bms_core
+      - SPRING_DATASOURCE_USERNAME=bms_user
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-bms_password}
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_SHOW_SQL=false
+
+      # JWT Configuration - CHANGE THESE!
+      - JWT_SECRET=${JWT_SECRET:-CHANGE_THIS_SECRET_KEY_FOR_PRODUCTION}
+      - JWT_ACCESS_TOKEN_EXPIRATION=${JWT_ACCESS_TOKEN_EXPIRATION:-900}
+      - JWT_REFRESH_TOKEN_EXPIRATION=${JWT_REFRESH_TOKEN_EXPIRATION:-2592000}
+
+      # AWS S3 Configuration - REQUIRED
+      - AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME}
+      - AWS_S3_REGION=${AWS_S3_REGION:-us-east-2}
+      - AWS_S3_ACCESS_KEY=${AWS_S3_ACCESS_KEY}
+      - AWS_S3_SECRET_KEY=${AWS_S3_SECRET_KEY}
+      - AWS_S3_BASE_URL=${AWS_S3_BASE_URL:-https://s3.us-east-2.amazonaws.com}
+
+      # AWS CloudFront Configuration - OPTIONAL
+      - AWS_CLOUDFRONT_DOMAIN=${AWS_CLOUDFRONT_DOMAIN}
+      - AWS_CLOUDFRONT_ENABLED=${AWS_CLOUDFRONT_ENABLED:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - bms-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  bms-network:
+    driver: bridge

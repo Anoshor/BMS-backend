@@ -123,10 +123,20 @@ PropertyBuildingService {
 
             // Handle images - if provided, update property images
             if (request.getImages() != null) {
-                // Delete existing images first
+                // Delete existing images first (from both DB and S3)
                 List<com.bms.backend.entity.PropertyImage> existingImages =
                     propertyImageRepository.findByProperty(property);
                 if (!existingImages.isEmpty()) {
+                    // Delete from S3 first
+                    for (com.bms.backend.entity.PropertyImage image : existingImages) {
+                        try {
+                            s3Service.deleteFile(image.getImageUrl());
+                        } catch (Exception e) {
+                            // Log error but continue - image might not exist in S3
+                            System.err.println("Failed to delete image from S3: " + image.getImageUrl() + " - " + e.getMessage());
+                        }
+                    }
+                    // Then delete from database
                     propertyImageRepository.deleteAll(existingImages);
                 }
 
@@ -160,6 +170,23 @@ PropertyBuildingService {
         Optional<PropertyBuilding> property = propertyBuildingRepository.findById(id);
 
         if (property.isPresent() && property.get().getManager().getId().equals(manager.getId())) {
+            PropertyBuilding prop = property.get();
+
+            // Delete all property images from S3 before deleting the property
+            List<com.bms.backend.entity.PropertyImage> propertyImages =
+                propertyImageRepository.findByProperty(prop);
+
+            for (com.bms.backend.entity.PropertyImage image : propertyImages) {
+                try {
+                    s3Service.deleteFile(image.getImageUrl());
+                    System.out.println("✅ Deleted property image from S3: " + image.getImageUrl());
+                } catch (Exception e) {
+                    // Log error but continue - image might not exist in S3
+                    System.err.println("Failed to delete property image from S3: " + image.getImageUrl() + " - " + e.getMessage());
+                }
+            }
+
+            // Delete property (cascade will delete PropertyImage records)
             propertyBuildingRepository.deleteById(id);
         } else {
             throw new RuntimeException("Property not found or not authorized");

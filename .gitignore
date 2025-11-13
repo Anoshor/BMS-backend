@@ -85,4 +85,4 @@ coverage/
 *.pid
 
 # Generated documentation
-docs/generated/
+docs/generated/services/payment-service/src/test/resources/application-test.yml

@@ -34,6 +34,7 @@ public class MaintenanceRequestResponse {
     private String landlordName;
     private String landlordPhone;
     private boolean managerInitiated;
+    private String managerUpdate; // Aggregated notes from manager updates
     private Instant scheduledAt;
     private Instant submittedAt;
     private Instant resolvedAt;
@@ -96,7 +97,23 @@ public class MaintenanceRequestResponse {
         this.managerInitiated = request.getRequester() != null &&
                                (request.getRequester().getRole().name().equals("PROPERTY_MANAGER") ||
                                 request.getRequester().getRole().name().equals("BUILDING_OWNER"));
-        
+
+        // Get ONLY the latest manager note from updates
+        if (request.getUpdates() != null && !request.getUpdates().isEmpty()) {
+            // Sort updates by creation time (newest first) and get the first manager note
+            String latestManagerNote = request.getUpdates().stream()
+                .sorted((u1, u2) -> u2.getCreatedAt().compareTo(u1.getCreatedAt())) // Sort descending (newest first)
+                .filter(update -> update.getNotes() != null && !update.getNotes().isEmpty())
+                .filter(update -> update.getUpdatedBy() != null &&
+                    (update.getUpdatedBy().getRole().name().equals("PROPERTY_MANAGER") ||
+                     update.getUpdatedBy().getRole().name().equals("BUILDING_OWNER")))
+                .map(update -> update.getNotes())
+                .findFirst()
+                .orElse(null);
+
+            this.managerUpdate = latestManagerNote;
+        }
+
         this.scheduledAt = request.getScheduledAt();
         this.submittedAt = request.getSubmittedAt();
         this.resolvedAt = request.getResolvedAt();
@@ -310,6 +327,14 @@ public class MaintenanceRequestResponse {
 
     public void setManagerInitiated(boolean managerInitiated) {
         this.managerInitiated = managerInitiated;
+    }
+
+    public String getManagerUpdate() {
+        return managerUpdate;
+    }
+
+    public void setManagerUpdate(String managerUpdate) {
+        this.managerUpdate = managerUpdate;
     }
 
     public Instant getScheduledAt() {

@@ -43,6 +43,9 @@ public class MaintenanceRequestService {
     @Autowired
     private MaintenanceRequestPhotoRepository maintenanceRequestPhotoRepository;
 
+    @Autowired
+    private S3Service s3Service;
+
     public MaintenanceRequest createMaintenanceRequest(MaintenanceRequestCreateRequest request, User requester) {
         Optional<Apartment> apartment = apartmentRepository.findById(request.getApartmentId());
         Optional<ServiceCategory> serviceCategory = serviceCategoryRepository.findById(request.getServiceCategoryId());
@@ -198,9 +201,25 @@ public class MaintenanceRequestService {
 
         if (maintenanceRequest.isPresent()) {
             MaintenanceRequest request = maintenanceRequest.get();
-            
+
             // Only manager can delete
             if (request.getApartment().getProperty().getManager().getId().equals(deleter.getId())) {
+                // Delete all maintenance request photos from S3 before deleting the request
+                List<MaintenanceRequestPhoto> photos = maintenanceRequestPhotoRepository.findByMaintenanceRequestId(id);
+
+                for (MaintenanceRequestPhoto photo : photos) {
+                    if (photo.getPhotoUrl() != null && !photo.getPhotoUrl().trim().isEmpty()) {
+                        try {
+                            s3Service.deleteFile(photo.getPhotoUrl());
+                            System.out.println("✅ Deleted maintenance photo from S3: " + photo.getPhotoUrl());
+                        } catch (Exception e) {
+                            // Log error but continue - photo might not exist in S3
+                            System.err.println("Failed to delete maintenance photo from S3: " + photo.getPhotoUrl() + " - " + e.getMessage());
+                        }
+                    }
+                }
+
+                // Delete the maintenance request (cascade will delete photos and updates)
                 maintenanceRequestRepository.deleteById(id);
             } else {
                 throw new RuntimeException("Not authorized to delete this maintenance request");

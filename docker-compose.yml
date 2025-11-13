@@ -36,29 +36,55 @@ services:
     networks:
       - bms-network
 
-  # Notification Service
-  bms-notification-service:
+  # Notification Service (Not implemented yet)
+  # bms-notification-service:
+  #   build:
+  #     context: ./services/notification-service
+  #     dockerfile: Dockerfile
+  #   image: anoshorpaul/bms-notification-service:latest
+  #   container_name: bms-notification-service
+  #   ports:
+  #     - "8081:8081"
+  #   environment:
+  #     - SPRING_PROFILES_ACTIVE=docker
+  #     - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-notification:5432/bms_notifications
+  #     - SPRING_DATASOURCE_USERNAME=bms_user
+  #     - SPRING_DATASOURCE_PASSWORD=bms_password
+  #     - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+  #     - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
+  #     - SPRING_DATA_REDIS_HOST=redis
+  #     - SPRING_DATA_REDIS_PORT=6379
+  #   depends_on:
+  #     postgres-notification:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_started
+  #   restart: unless-stopped
+  #   networks:
+  #     - bms-network
+
+  # Payment Service
+  bms-payment-service:
     build:
-      context: ./services/notification-service
+      context: ./services/payment-service
       dockerfile: Dockerfile
-    image: anoshorpaul/bms-notification-service:latest
-    container_name: bms-notification-service
+    image: anoshorpaul/bms-payment-service:latest
+    container_name: bms-payment-service
     ports:
-      - "8081:8081"
+      - "8082:8082"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-notification:5432/bms_notifications
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-payment:5432/bms_payment_db
       - SPRING_DATASOURCE_USERNAME=bms_user
       - SPRING_DATASOURCE_PASSWORD=bms_password
       - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
       - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=6379
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
     depends_on:
-      postgres-notification:
+      postgres-payment:
         condition: service_healthy
-      redis:
-        condition: service_started
     restart: unless-stopped
     networks:
       - bms-network
@@ -82,19 +108,38 @@ services:
     networks:
       - bms-network
 
-  # PostgreSQL Database for Notification Service
-  postgres-notification:
+  # PostgreSQL Database for Notification Service (Not implemented yet)
+  # postgres-notification:
+  #   image: postgres:15
+  #   environment:
+  #     - POSTGRES_DB=bms_notifications
+  #     - POSTGRES_USER=bms_user
+  #     - POSTGRES_PASSWORD=bms_password
+  #   ports:
+  #     - "5433:5432"
+  #   volumes:
+  #     - postgres_notification_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U bms_user -d bms_notifications"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - bms-network
+
+  # PostgreSQL Database for Payment Service
+  postgres-payment:
     image: postgres:15
     environment:
-      - POSTGRES_DB=bms_notifications
+      - POSTGRES_DB=bms_payment_db
       - POSTGRES_USER=bms_user
       - POSTGRES_PASSWORD=bms_password
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
-      - postgres_notification_data:/var/lib/postgresql/data
+      - postgres_payment_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U bms_user -d bms_notifications"]
+      test: ["CMD-SHELL", "pg_isready -U bms_user -d bms_payment_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -113,7 +158,8 @@ services:
 
 volumes:
   postgres_core_data:
-  postgres_notification_data:
+  # postgres_notification_data:
+  postgres_payment_data:
   redis_data:
 
 networks:
