@@ -53,6 +53,7 @@ application-local.properties
 application-prod.properties
 application-staging.properties
 application-dev.properties
+application-test.yml
 .env
 .env.local
 .env.production

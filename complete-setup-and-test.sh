@@ -215,8 +215,8 @@ CONNECT_RESPONSE=$(curl -s -X POST "${CORE_SERVICE}/api/v1/tenants/connect" \
   -d "{
     \"tenantEmail\": \"${TENANT_EMAIL}\",
     \"apartmentId\": \"${APARTMENT_ID}\",
-    \"startDate\": \"2025-01-01\",
-    \"endDate\": \"2026-01-01\",
+    \"startDate\": \"2026-01-01\",
+    \"endDate\": \"2027-01-01\",
     \"monthlyRent\": 1500.00,
     \"securityDeposit\": 3000.00,
     \"paymentFrequency\": \"MONTHLY\"
@@ -546,7 +546,7 @@ echo ""
 echo "Step 9d: Testing Payment Schedule with date range..."
 echo "----------------------------------------"
 
-SCHEDULE_RANGE_RESPONSE=$(curl -s -X GET "${CORE_SERVICE}/api/v1/leases/${CONNECTION_ID}/payment-schedule?startMonth=2025-01&endMonth=2025-06" \
+SCHEDULE_RANGE_RESPONSE=$(curl -s -X GET "${CORE_SERVICE}/api/v1/leases/${CONNECTION_ID}/payment-schedule?startMonth=2026-01&endMonth=2026-06" \
   -H "Authorization: Bearer ${TENANT_TOKEN}")
 
 echo "$SCHEDULE_RANGE_RESPONSE" | jq .
@@ -558,7 +558,7 @@ if [ "$SCHEDULE_RANGE_SUCCESS" != "true" ]; then
 else
     echo "✅ Payment schedule with date range works!"
     ITEMS_RETURNED=$(echo "$SCHEDULE_RANGE_RESPONSE" | jq -r '.data.itemsReturned // empty')
-    echo "   Items Returned: $ITEMS_RETURNED (Jan-Jun 2025)"
+    echo "   Items Returned: $ITEMS_RETURNED (Jan-Jun 2026)"
 fi
 echo ""
 
@@ -1050,8 +1050,8 @@ else
           -d "{
             \"tenantEmail\": \"${NEW_TENANT_EMAIL}\",
             \"apartmentId\": \"${NEW_APARTMENT_ID}\",
-            \"startDate\": \"2025-01-01\",
-            \"endDate\": \"2026-01-01\",
+            \"startDate\": \"2026-01-01\",
+            \"endDate\": \"2027-01-01\",
             \"monthlyRent\": 1200.00,
             \"securityDeposit\": 2400.00,
             \"paymentFrequency\": \"MONTHLY\"
