@@ -20,7 +20,7 @@ public class ManagerRegistrationRequest {
     private String email;
 
     @NotBlank(message = "Contact number is required")
-    @Pattern(regexp = "^[0-9]{10}$", message = "Contact number must be 10 digits")
+    @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Invalid phone number format")
     private String contactNum;
 
     @NotBlank(message = "Password is required")

@@ -47,7 +47,17 @@ public class UserService {
 
     public User createUser(SignupRequest request) {
         validateSignupRequest(request);
-        
+
+        // Check if email/phone were pre-verified during signup form
+        boolean emailPreVerified = otpService.wasRecentlyVerified(
+                request.getEmail(), com.bms.backend.enums.OtpType.EMAIL_VERIFICATION);
+        boolean phonePreVerified = otpService.wasRecentlyVerified(
+                request.getContactNum(), com.bms.backend.enums.OtpType.PHONE_VERIFICATION);
+
+        System.out.println("📧 Email pre-verified: " + emailPreVerified + " for " + request.getEmail());
+        System.out.println("📱 Phone pre-verified: " + phonePreVerified + " for " + request.getContactNum());
+        System.out.println("✅ Account will be set to: " + (emailPreVerified && phonePreVerified ? "ACTIVE" : "PENDING"));
+
         User user = new User();
         user.setEmail(request.getEmail());
         user.setPhone(request.getContactNum());
@@ -56,16 +66,24 @@ public class UserService {
         user.setLastName(request.getLastName());
         user.setDateOfBirth(request.getDob().toLocalDate());
         user.setGender(normalizeString(request.getGender()));
-        user.setAccountStatus(AccountStatus.PENDING);
-        user.setEmailVerified(false);
-        user.setPhoneVerified(false);
-        
-        UserRole role = request.getRole().toUpperCase().equals("MANAGER") ? 
+
+        // Set verification status based on pre-verification
+        user.setEmailVerified(emailPreVerified);
+        user.setPhoneVerified(phonePreVerified);
+
+        // Set account status - ACTIVE if both verified, otherwise PENDING
+        if (emailPreVerified && phonePreVerified) {
+            user.setAccountStatus(AccountStatus.ACTIVE);
+        } else {
+            user.setAccountStatus(AccountStatus.PENDING);
+        }
+
+        UserRole role = request.getRole().toUpperCase().equals("MANAGER") ?
                        UserRole.PROPERTY_MANAGER : UserRole.TENANT;
         user.setRole(role);
-        
+
         User savedUser = userRepository.save(user);
-        
+
         if (role == UserRole.TENANT) {
             TenantProfile profile = new TenantProfile(savedUser);
             tenantProfileRepository.save(profile);
@@ -73,16 +91,27 @@ public class UserService {
             ManagerProfile profile = new ManagerProfile(savedUser);
             managerProfileRepository.save(profile);
         }
-        
-        otpService.generateAndSendEmailVerificationOtp(savedUser.getEmail());
-        otpService.generateAndSendPhoneVerificationOtp(savedUser.getPhone());
-        
+
+        // Only send verification OTPs for unverified fields
+        if (!emailPreVerified) {
+            otpService.generateAndSendEmailVerificationOtp(savedUser.getEmail());
+        }
+        if (!phonePreVerified) {
+            otpService.generateAndSendPhoneVerificationOtp(savedUser.getPhone());
+        }
+
         return savedUser;
     }
     
     public User createTenantUser(TenantRegistrationRequest request) {
         validateTenantRegistration(request);
-        
+
+        // Check if email/phone were pre-verified during signup form
+        boolean emailPreVerified = otpService.wasRecentlyVerified(
+                request.getEmail(), com.bms.backend.enums.OtpType.EMAIL_VERIFICATION);
+        boolean phonePreVerified = otpService.wasRecentlyVerified(
+                request.getContactNum(), com.bms.backend.enums.OtpType.PHONE_VERIFICATION);
+
         User user = new User();
         user.setEmail(request.getEmail());
         user.setPhone(request.getContactNum());
@@ -92,26 +121,44 @@ public class UserService {
         user.setLastName(request.getLastName());
         user.setDateOfBirth(request.getDob());
         user.setGender(normalizeString(request.getGender()));
-        user.setAccountStatus(AccountStatus.PENDING);
-        user.setEmailVerified(false);
-        user.setPhoneVerified(false);
-        
+
+        // Set verification status based on pre-verification
+        user.setEmailVerified(emailPreVerified);
+        user.setPhoneVerified(phonePreVerified);
+
+        // Set account status - ACTIVE if both verified, otherwise PENDING
+        if (emailPreVerified && phonePreVerified) {
+            user.setAccountStatus(AccountStatus.ACTIVE);
+        } else {
+            user.setAccountStatus(AccountStatus.PENDING);
+        }
+
         User savedUser = userRepository.save(user);
-        
+
         // Create tenant profile
         TenantProfile profile = new TenantProfile(savedUser);
         tenantProfileRepository.save(profile);
-        
-        // Send verification OTPs
-        otpService.generateAndSendEmailVerificationOtp(savedUser.getEmail());
-        otpService.generateAndSendPhoneVerificationOtp(savedUser.getPhone());
-        
+
+        // Only send verification OTPs for unverified fields
+        if (!emailPreVerified) {
+            otpService.generateAndSendEmailVerificationOtp(savedUser.getEmail());
+        }
+        if (!phonePreVerified) {
+            otpService.generateAndSendPhoneVerificationOtp(savedUser.getPhone());
+        }
+
         return savedUser;
     }
     
     public User createManagerUser(ManagerRegistrationRequest request) {
         validateManagerRegistration(request);
-        
+
+        // Check if email/phone were pre-verified during signup form
+        boolean emailPreVerified = otpService.wasRecentlyVerified(
+                request.getEmail(), com.bms.backend.enums.OtpType.EMAIL_VERIFICATION);
+        boolean phonePreVerified = otpService.wasRecentlyVerified(
+                request.getContactNum(), com.bms.backend.enums.OtpType.PHONE_VERIFICATION);
+
         User user = new User();
         user.setEmail(request.getEmail());
         user.setPhone(request.getContactNum());
@@ -121,12 +168,17 @@ public class UserService {
         user.setLastName(request.getLastName());
         user.setDateOfBirth(request.getDob());
         user.setGender(normalizeString(request.getGender()));
+
+        // Set verification status based on pre-verification
+        user.setEmailVerified(emailPreVerified);
+        user.setPhoneVerified(phonePreVerified);
+
+        // Manager accounts still need admin approval, but mark verification status
+        // Note: Managers still stay PENDING until admin approval regardless of OTP verification
         user.setAccountStatus(AccountStatus.PENDING);
-        user.setEmailVerified(false);
-        user.setPhoneVerified(false);
-        
+
         User savedUser = userRepository.save(user);
-        
+
         // Create manager profile with property details
         ManagerProfile profile = new ManagerProfile(savedUser);
         profile.setCompanyName(request.getPropertyName());
@@ -135,11 +187,15 @@ public class UserService {
         profile.setBusinessPhone(request.getContactNum());
         profile.setBusinessEmail(request.getEmail());
         managerProfileRepository.save(profile);
-        
-        // Send verification OTPs
-        otpService.generateAndSendEmailVerificationOtp(savedUser.getEmail());
-        otpService.generateAndSendPhoneVerificationOtp(savedUser.getPhone());
-        
+
+        // Only send verification OTPs for unverified fields
+        if (!emailPreVerified) {
+            otpService.generateAndSendEmailVerificationOtp(savedUser.getEmail());
+        }
+        if (!phonePreVerified) {
+            otpService.generateAndSendPhoneVerificationOtp(savedUser.getPhone());
+        }
+
         return savedUser;
     }
     
@@ -161,6 +217,14 @@ public class UserService {
     
     public boolean existsByEmailOrPhone(String email, String phone) {
         return userRepository.existsByEmailOrPhone(email, phone);
+    }
+
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email);
+    }
+
+    public boolean existsByPhone(String phone) {
+        return userRepository.existsByPhone(phone);
     }
     
     public User verifyEmail(String email, String otpCode) {

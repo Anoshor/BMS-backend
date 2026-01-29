@@ -12,6 +12,7 @@ import com.bms.backend.enums.AccountStatus;
 import com.bms.backend.enums.DeviceType;
 import com.bms.backend.enums.UserRole;
 import com.bms.backend.service.JwtService;
+import com.bms.backend.service.OtpService;
 import com.bms.backend.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -29,10 +30,270 @@ public class AuthController {
     
     @Autowired
     private UserService userService;
-    
+
     @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    private OtpService otpService;
     
+    // ============================================
+    // PRE-SIGNUP OTP ENDPOINTS (No auth required)
+    // ============================================
+
+    @PostMapping("/otp/send-email")
+    public ResponseEntity<ApiResponse<String>> sendEmailOtp(@RequestParam String email) {
+        try {
+            // Basic email validation
+            if (email == null || !email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Invalid email address"));
+            }
+
+            // Check if email is already registered
+            if (userService.existsByEmail(email)) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Email is already registered"));
+            }
+
+            otpService.generateAndSendEmailVerificationOtp(email);
+            return ResponseEntity.ok(ApiResponse.success(null, "OTP sent successfully to your email"));
+
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to send OTP. Please try again."));
+        }
+    }
+
+    @PostMapping("/otp/send-phone")
+    public ResponseEntity<ApiResponse<String>> sendPhoneOtp(@RequestParam String phone) {
+        try {
+            // Basic phone validation
+            if (phone == null || phone.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Invalid phone number"));
+            }
+
+            // Check if phone is already registered
+            if (userService.existsByPhone(phone)) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Phone number is already registered"));
+            }
+
+            otpService.generateAndSendPhoneVerificationOtp(phone);
+            return ResponseEntity.ok(ApiResponse.success(null, "OTP sent successfully to your phone"));
+
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to send OTP. Please try again."));
+        }
+    }
+
+    @PostMapping("/otp/verify-email")
+    public ResponseEntity<ApiResponse<String>> verifyEmailOtp(
+            @RequestParam String email,
+            @RequestParam String otp) {
+        try {
+            boolean isValid = otpService.verifyEmailOtp(email, otp);
+
+            if (isValid) {
+                return ResponseEntity.ok(ApiResponse.success(null, "Email verified successfully"));
+            } else {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Invalid or expired OTP"));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Verification failed. Please try again."));
+        }
+    }
+
+    @PostMapping("/otp/verify-phone")
+    public ResponseEntity<ApiResponse<String>> verifyPhoneOtp(
+            @RequestParam String phone,
+            @RequestParam String otp) {
+        try {
+            boolean isValid = otpService.verifyPhoneOtp(phone, otp);
+
+            if (isValid) {
+                return ResponseEntity.ok(ApiResponse.success(null, "Phone verified successfully"));
+            } else {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Invalid or expired OTP"));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Verification failed. Please try again."));
+        }
+    }
+
+    // ============================================
+    // LOGIN VIA OTP ENDPOINTS (Passwordless Login)
+    // ============================================
+
+    /**
+     * Send OTP for passwordless login.
+     * User must already exist and have an ACTIVE account.
+     *
+     * @param identifier Phone number or email
+     * @param type "phone" or "email"
+     * @param role "TENANT" or "MANAGER"
+     */
+    @PostMapping("/login/send-otp")
+    public ResponseEntity<ApiResponse<String>> sendLoginOtp(
+            @RequestParam String identifier,
+            @RequestParam String type,
+            @RequestParam String role) {
+        try {
+            // Validate type parameter
+            boolean isPhone = "phone".equalsIgnoreCase(type);
+            if (!isPhone && !"email".equalsIgnoreCase(type)) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Invalid type. Must be 'phone' or 'email'"));
+            }
+
+            // Find user by identifier
+            Optional<User> userOpt = isPhone
+                    ? userService.findByPhone(identifier)
+                    : userService.findByEmail(identifier);
+
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("No account found with this " + type));
+            }
+
+            User user = userOpt.get();
+
+            // Validate role matches
+            UserRole expectedRole = role.toUpperCase().equals("MANAGER")
+                    ? UserRole.PROPERTY_MANAGER : UserRole.TENANT;
+            if (user.getRole() != expectedRole) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("This " + type + " is registered with a different account type"));
+            }
+
+            // Check account status - allow ACTIVE accounts and PENDING accounts (they might be completing verification)
+            if (user.getAccountStatus() == AccountStatus.SUSPENDED ||
+                user.getAccountStatus() == AccountStatus.DEACTIVATED) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Account is not active. Please contact support."));
+            }
+
+            // Send OTP
+            otpService.generateAndSendLoginOtp(identifier, isPhone);
+
+            return ResponseEntity.ok(ApiResponse.success(null,
+                    "OTP sent successfully to your " + type));
+
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to send OTP. Please try again."));
+        }
+    }
+
+    /**
+     * Verify OTP and return tokens for passwordless login.
+     *
+     * @param identifier Phone number or email
+     * @param otp The OTP code
+     * @param role "TENANT" or "MANAGER"
+     * @param deviceId Optional device ID for refresh token
+     * @param deviceType Optional device type (android, ios, web)
+     */
+    @PostMapping("/login/verify-otp")
+    public ResponseEntity<ApiResponse<AuthResponse>> verifyLoginOtp(
+            @RequestParam String identifier,
+            @RequestParam String otp,
+            @RequestParam String role,
+            @RequestParam(required = false) String deviceId,
+            @RequestParam(required = false, defaultValue = "android") String deviceType) {
+        try {
+            // Verify OTP
+            boolean isValid = otpService.verifyLoginOtp(identifier, otp);
+            if (!isValid) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Invalid or expired OTP"));
+            }
+
+            // Find user (could be by phone or email)
+            Optional<User> userOpt = userService.findByPhone(identifier);
+            if (userOpt.isEmpty()) {
+                userOpt = userService.findByEmail(identifier);
+            }
+
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("User not found"));
+            }
+
+            User user = userOpt.get();
+
+            // Validate role
+            UserRole expectedRole = role.toUpperCase().equals("MANAGER")
+                    ? UserRole.PROPERTY_MANAGER : UserRole.TENANT;
+            if (user.getRole() != expectedRole) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Invalid account type"));
+            }
+
+            // Check account status
+            if (user.getAccountStatus() != AccountStatus.ACTIVE) {
+                String message = switch (user.getAccountStatus()) {
+                    case PENDING -> "Account verification is pending. Please complete verification first.";
+                    case SUSPENDED -> "Account is suspended. Please contact support.";
+                    case DEACTIVATED -> "Account is deactivated. Please contact support.";
+                    default -> "Account is not active.";
+                };
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error(message));
+            }
+
+            // Generate tokens
+            DeviceType devType = DeviceType.fromCode(deviceType);
+            String accessToken = jwtService.generateAccessToken(user);
+            String refreshToken = jwtService.generateRefreshToken(user, deviceId, devType);
+
+            // Update last login
+            userService.updateLastLogin(user);
+
+            // Create response
+            AuthResponse authResponse = AuthResponse.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(refreshToken)
+                    .requiresVerification(false)
+                    .requiresDocuments(false)
+                    .expiresIn(jwtService.getAccessTokenExpiration())
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success(authResponse, "Login successful"));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Login verification failed. Please try again."));
+        }
+    }
+
+    // ============================================
+    // SIGNUP & LOGIN ENDPOINTS
+    // ============================================
+
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<AuthResponse>> signup(
             @RequestBody @Valid SignupRequest request,

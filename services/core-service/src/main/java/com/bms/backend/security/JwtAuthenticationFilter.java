@@ -117,9 +117,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private boolean isPublicEndpoint(String path) {
-        // Note: context-path is /api/v1, so actual paths are relative to that
-        return (path.startsWith("/auth/") && 
-                !path.equals("/auth/profile")) ||
+        // Actual request paths include the context-path /api/v1
+        return (path.startsWith("/api/v1/auth/") &&
+                !path.equals("/api/v1/auth/profile")) ||
                 path.equals("/health") ||
                 path.startsWith("/actuator/") ||
                 path.startsWith("/v3/api-docs") ||
