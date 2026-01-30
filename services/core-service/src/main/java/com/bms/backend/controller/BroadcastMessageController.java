@@ -7,6 +7,10 @@ import com.bms.backend.dto.response.TenantBroadcastMessageResponse;
 import com.bms.backend.entity.User;
 import com.bms.backend.enums.UserRole;
 import com.bms.backend.service.BroadcastMessageService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,6 +24,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/broadcast")
+@Tag(name = "Broadcast Messages", description = "APIs for managing broadcast messages between property managers and tenants")
 public class BroadcastMessageController {
 
     @Autowired
@@ -27,6 +32,8 @@ public class BroadcastMessageController {
 
     // ==================== MANAGER ENDPOINTS ====================
 
+    @Operation(summary = "Create a broadcast message",
+               description = "Create a new broadcast message to send to tenants. Requires PROPERTY_MANAGER or BUILDING_OWNER role.")
     @PostMapping("/messages")
     public ResponseEntity<ApiResponse<BroadcastMessageResponse>> createBroadcast(
             @Valid @RequestBody CreateBroadcastRequest request) {
@@ -51,6 +58,8 @@ public class BroadcastMessageController {
         }
     }
 
+    @Operation(summary = "Get all broadcasts for manager",
+               description = "Retrieve all broadcast messages created by the logged-in manager with delivery statistics.")
     @GetMapping("/messages")
     public ResponseEntity<ApiResponse<List<BroadcastMessageResponse>>> getManagerBroadcasts() {
         try {
@@ -70,8 +79,11 @@ public class BroadcastMessageController {
         }
     }
 
+    @Operation(summary = "Get broadcast details",
+               description = "Retrieve detailed information about a specific broadcast message including delivery stats.")
     @GetMapping("/messages/{id}")
-    public ResponseEntity<ApiResponse<BroadcastMessageResponse>> getBroadcastDetails(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<BroadcastMessageResponse>> getBroadcastDetails(
+            @Parameter(description = "Broadcast message ID") @PathVariable UUID id) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
@@ -92,8 +104,11 @@ public class BroadcastMessageController {
         }
     }
 
+    @Operation(summary = "Expire a broadcast",
+               description = "Manually expire a broadcast message before its expiration date. Message will no longer be visible to tenants.")
     @PutMapping("/messages/{id}/expire")
-    public ResponseEntity<ApiResponse<BroadcastMessageResponse>> expireBroadcast(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<BroadcastMessageResponse>> expireBroadcast(
+            @Parameter(description = "Broadcast message ID") @PathVariable UUID id) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
@@ -114,8 +129,11 @@ public class BroadcastMessageController {
         }
     }
 
+    @Operation(summary = "Delete a broadcast",
+               description = "Permanently delete a broadcast message and all its recipient records.")
     @DeleteMapping("/messages/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteBroadcast(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<Void>> deleteBroadcast(
+            @Parameter(description = "Broadcast message ID") @PathVariable UUID id) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
@@ -138,6 +156,8 @@ public class BroadcastMessageController {
 
     // ==================== TENANT ENDPOINTS ====================
 
+    @Operation(summary = "Get active messages for tenant",
+               description = "Retrieve active (non-expired, non-dismissed) broadcast messages for the carousel display. Requires TENANT role.")
     @GetMapping("/tenant/messages")
     public ResponseEntity<ApiResponse<List<TenantBroadcastMessageResponse>>> getActiveMessagesForTenant() {
         try {
@@ -157,6 +177,8 @@ public class BroadcastMessageController {
         }
     }
 
+    @Operation(summary = "Get all messages for tenant",
+               description = "Retrieve all broadcast messages (including expired and dismissed) for the history view.")
     @GetMapping("/tenant/messages/all")
     public ResponseEntity<ApiResponse<List<TenantBroadcastMessageResponse>>> getAllMessagesForTenant() {
         try {
@@ -176,8 +198,11 @@ public class BroadcastMessageController {
         }
     }
 
+    @Operation(summary = "Mark message as read",
+               description = "Mark a broadcast message as read by the tenant.")
     @PutMapping("/tenant/messages/{id}/read")
-    public ResponseEntity<ApiResponse<TenantBroadcastMessageResponse>> markAsRead(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<TenantBroadcastMessageResponse>> markAsRead(
+            @Parameter(description = "Recipient record ID") @PathVariable UUID id) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
@@ -198,8 +223,11 @@ public class BroadcastMessageController {
         }
     }
 
+    @Operation(summary = "Dismiss message",
+               description = "Dismiss a broadcast message from the carousel. Message will still appear in history.")
     @PutMapping("/tenant/messages/{id}/dismiss")
-    public ResponseEntity<ApiResponse<TenantBroadcastMessageResponse>> dismissMessage(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<TenantBroadcastMessageResponse>> dismissMessage(
+            @Parameter(description = "Recipient record ID") @PathVariable UUID id) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
@@ -220,6 +248,8 @@ public class BroadcastMessageController {
         }
     }
 
+    @Operation(summary = "Get unread message count",
+               description = "Get the count of unread active messages for badge display.")
     @GetMapping("/tenant/messages/unread-count")
     public ResponseEntity<ApiResponse<Long>> getUnreadCount() {
         try {

@@ -86,6 +86,11 @@ public class SecurityConfig {
                         // Debug endpoints (development only)
                         .requestMatchers("/api/v1/debug/**").permitAll()
 
+                        // Broadcast endpoints - Manager can create/manage broadcasts
+                        .requestMatchers("/api/v1/broadcast/messages/**").hasAnyRole("PROPERTY_MANAGER", "BUILDING_OWNER")
+                        // Broadcast endpoints - Tenant can view/interact with their messages
+                        .requestMatchers("/api/v1/broadcast/tenant/**").hasRole("TENANT")
+
                         // Property endpoints (accessible by authenticated managers)
                         .requestMatchers("/api/v1/properties/**").authenticated()
 
