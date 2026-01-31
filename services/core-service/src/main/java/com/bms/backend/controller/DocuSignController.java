@@ -124,6 +124,29 @@ public class DocuSignController {
         }
     }
 
+    @PostMapping("/leases/{connectionId}/sync-status")
+    @Operation(summary = "Sync lease signing status", description = "Force sync the signing status from DocuSign (useful when webhook is not configured)")
+    public ResponseEntity<ApiResponse<LeaseSigningStatusResponse>> syncLeaseSigningStatus(
+            @PathVariable UUID connectionId) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+
+            LeaseSigningStatusResponse status = docuSignService.syncStatusFromDocuSign(connectionId, user);
+            return ResponseEntity.ok(ApiResponse.success(status, "Lease signing status synced successfully"));
+
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to sync lease signing status: " + e.getMessage()));
+        }
+    }
+
     @PutMapping("/leases/{connectionId}/void")
     @Operation(summary = "Void lease envelope", description = "Cancel/void the DocuSign envelope for a lease")
     public ResponseEntity<ApiResponse<String>> voidLeaseEnvelope(

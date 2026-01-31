@@ -281,6 +281,51 @@ public class DocuSignService {
     }
 
     @Transactional
+    public LeaseSigningStatusResponse syncStatusFromDocuSign(UUID connectionId, User user) throws Exception {
+        if (!docuSignConfig.isEnabled()) {
+            throw new IllegalStateException("DocuSign integration is not enabled");
+        }
+
+        TenantPropertyConnection connection = connectionRepository.findById(connectionId)
+                .orElseThrow(() -> new IllegalArgumentException("Lease connection not found"));
+
+        // Verify user has access (either manager or tenant)
+        boolean isManager = connection.getManager() != null && connection.getManager().getId().equals(user.getId());
+        boolean isTenant = connection.getTenant() != null && connection.getTenant().getId().equals(user.getId());
+
+        if (!isManager && !isTenant) {
+            throw new SecurityException("You don't have permission to access this lease");
+        }
+
+        String envelopeId = connection.getDocusignEnvelopeId();
+        if (envelopeId == null || envelopeId.isEmpty()) {
+            throw new IllegalStateException("Lease has not been sent for signing yet");
+        }
+
+        // Get envelope status from DocuSign
+        ApiClient apiClient = docuSignConfig.getApiClient();
+        EnvelopesApi envelopesApi = new EnvelopesApi(apiClient);
+
+        Envelope envelope = envelopesApi.getEnvelope(docuSignConfig.getAccountId(), envelopeId);
+        String docuSignStatus = envelope.getStatus();
+
+        logger.info("Syncing status from DocuSign. EnvelopeId: {}, DocuSign Status: {}, Current Status: {}",
+                envelopeId, docuSignStatus, connection.getLeaseSigningStatus());
+
+        // Update status in database
+        LeaseSigningStatus newStatus = LeaseSigningStatus.fromDocuSignStatus(docuSignStatus);
+        connection.setLeaseSigningStatus(newStatus);
+
+        if (newStatus == LeaseSigningStatus.SIGNED && envelope.getCompletedDateTime() != null) {
+            connection.setDocusignSignedAt(Instant.parse(envelope.getCompletedDateTime()));
+        }
+
+        connectionRepository.save(connection);
+
+        return getLeaseSigningStatus(connectionId, user);
+    }
+
+    @Transactional
     public void processWebhookEvent(String envelopeId, String status, String eventTimestamp) {
         Optional<TenantPropertyConnection> connectionOpt = connectionRepository.findByDocusignEnvelopeId(envelopeId);
 
@@ -305,14 +350,18 @@ public class DocuSignService {
     }
 
     public boolean verifyWebhookSignature(String payload, String signature) {
-        if (signature == null || signature.isEmpty()) {
-            return false;
-        }
-
         String webhookSecret = docuSignConfig.getWebhookSecret();
+
+        // If webhook secret is not configured, allow all requests (for development)
         if (webhookSecret == null || webhookSecret.isEmpty()) {
             logger.warn("Webhook secret not configured, skipping signature verification");
-            return true; // Allow if not configured (for development)
+            return true;
+        }
+
+        // If secret is configured but no signature provided, reject
+        if (signature == null || signature.isEmpty()) {
+            logger.warn("Webhook signature required but not provided");
+            return false;
         }
 
         try {
