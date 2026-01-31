@@ -50,6 +50,7 @@ public class S3Service {
         PROPERTY("property"),
         APARTMENT("apartments"),
         DOCUMENT("documents"),
+        LEASE("leases"),
         OTHER("other");
 
         private final String folder;
@@ -82,6 +83,26 @@ public class S3Service {
             return generateFileUrl(key);
         } catch (Exception e) {
             throw new RuntimeException("Failed to upload file to S3: " + e.getMessage(), e);
+        }
+    }
+
+    public String uploadBytes(byte[] bytes, String originalFilename, String contentType, UUID userId, FileType fileType) {
+        String fileName = generateFileName(originalFilename);
+        String key = generateS3Key(userId, fileType, fileName);
+
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .contentType(contentType)
+                    .contentLength((long) bytes.length)
+                    .build();
+
+            s3Client.putObject(putObjectRequest, RequestBody.fromBytes(bytes));
+
+            return generateFileUrl(key);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to upload bytes to S3: " + e.getMessage(), e);
         }
     }
 

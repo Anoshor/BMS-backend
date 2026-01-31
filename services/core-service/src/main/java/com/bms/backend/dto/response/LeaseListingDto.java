@@ -1,6 +1,7 @@
 package com.bms.backend.dto.response;
 
 import com.bms.backend.entity.TenantPropertyConnection;
+import com.bms.backend.enums.LeaseSigningStatus;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.Instant;
@@ -38,6 +39,10 @@ public class LeaseListingDto {
     private UUID managerId;
     private String managerName;
     private String managerEmail;
+
+    // DocuSign Lease Signing
+    private LeaseSigningStatus leaseSigningStatus;
+    private String leaseDocumentUrl;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "UTC")
     private Instant createdAt;
@@ -113,6 +118,10 @@ public class LeaseListingDto {
             this.managerName = connection.getManager().getFirstName() + " " + connection.getManager().getLastName();
             this.managerEmail = connection.getManager().getEmail();
         }
+
+        // DocuSign Lease Signing information
+        this.leaseSigningStatus = connection.getLeaseSigningStatus();
+        this.leaseDocumentUrl = connection.getLeaseDocumentUrl();
     }
 
     private String generateLeaseId(UUID connectionId) {
@@ -386,5 +395,21 @@ public class LeaseListingDto {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public LeaseSigningStatus getLeaseSigningStatus() {
+        return leaseSigningStatus;
+    }
+
+    public void setLeaseSigningStatus(LeaseSigningStatus leaseSigningStatus) {
+        this.leaseSigningStatus = leaseSigningStatus;
+    }
+
+    public String getLeaseDocumentUrl() {
+        return leaseDocumentUrl;
+    }
+
+    public void setLeaseDocumentUrl(String leaseDocumentUrl) {
+        this.leaseDocumentUrl = leaseDocumentUrl;
     }
 }

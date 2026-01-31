@@ -1,0 +1,442 @@
+{
+	"info": {
+		"_postman_id": "broadcast-messages-api",
+		"name": "BMS - Broadcast Messages API",
+		"description": "APIs for managing broadcast messages between property managers and tenants",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "broadcastId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "recipientId",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Manager Endpoints",
+			"description": "Endpoints for property managers to create and manage broadcast messages",
+			"item": [
+				{
+					"name": "Create Broadcast - All Tenants",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.collectionVariables.set('broadcastId', jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Rent Due Reminder\",\n    \"content\": \"This is a friendly reminder that rent is due on the 1st of each month. Please ensure timely payment to avoid late fees.\",\n    \"priority\": \"WARNING\",\n    \"targetType\": \"ALL_TENANTS\",\n    \"expiresAt\": \"2026-02-28T23:59:59Z\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/broadcast/messages",
+							"host": ["{{baseUrl}}"],
+							"path": ["broadcast", "messages"]
+						},
+						"description": "Create a broadcast message to all tenants"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Broadcast - Specific Property",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.collectionVariables.set('broadcastId', jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Building Maintenance Notice\",\n    \"content\": \"The water supply will be temporarily shut off on Saturday from 10 AM to 2 PM for maintenance work. Please plan accordingly.\",\n    \"priority\": \"URGENT\",\n    \"targetType\": \"SPECIFIC_PROPERTY\",\n    \"targetPropertyId\": \"YOUR_PROPERTY_UUID_HERE\",\n    \"expiresAt\": \"2026-02-15T23:59:59Z\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/broadcast/messages",
+							"host": ["{{baseUrl}}"],
+							"path": ["broadcast", "messages"]
+						},
+						"description": "Create a broadcast message to all tenants in a specific property"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Broadcast - Multiple Tenants",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.collectionVariables.set('broadcastId', jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Lease Renewal Notice\",\n    \"content\": \"Your lease is expiring soon. Please contact the management office to discuss renewal options.\",\n    \"priority\": \"INFO\",\n    \"targetType\": \"MULTIPLE_TENANTS\",\n    \"targetTenantIds\": [\n        \"TENANT_UUID_1\",\n        \"TENANT_UUID_2\"\n    ],\n    \"actionUrl\": \"/(authenticated)/tenant/leases\",\n    \"expiresAt\": \"2026-03-01T23:59:59Z\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/broadcast/messages",
+							"host": ["{{baseUrl}}"],
+							"path": ["broadcast", "messages"]
+						},
+						"description": "Create a broadcast message to specific tenants"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Broadcast - Single Tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.collectionVariables.set('broadcastId', jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Package Delivery Notice\",\n    \"content\": \"You have a package waiting at the front desk. Please pick it up at your earliest convenience.\",\n    \"priority\": \"INFO\",\n    \"targetType\": \"SINGLE_TENANT\",\n    \"targetTenantIds\": [\n        \"TENANT_UUID_HERE\"\n    ],\n    \"expiresAt\": \"2026-02-10T23:59:59Z\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/broadcast/messages",
+							"host": ["{{baseUrl}}"],
+							"path": ["broadcast", "messages"]
+						},
+						"description": "Create a broadcast message to a single tenant"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Manager Broadcasts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/broadcast/messages",
+							"host": ["{{baseUrl}}"],
+							"path": ["broadcast", "messages"]
+						},
+						"description": "Get all broadcast messages created by the logged-in manager with delivery statistics"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Broadcast Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/broadcast/messages/{{broadcastId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["broadcast", "messages", "{{broadcastId}}"]
+						},
+						"description": "Get detailed information about a specific broadcast message"
+					},
+					"response": []
+				},
+				{
+					"name": "Expire Broadcast",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/broadcast/messages/{{broadcastId}}/expire",
+							"host": ["{{baseUrl}}"],
+							"path": ["broadcast", "messages", "{{broadcastId}}", "expire"]
+						},
+						"description": "Manually expire a broadcast message before its expiration date"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Broadcast",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/broadcast/messages/{{broadcastId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["broadcast", "messages", "{{broadcastId}}"]
+						},
+						"description": "Permanently delete a broadcast message"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Tenant Endpoints",
+			"description": "Endpoints for tenants to view and interact with broadcast messages",
+			"item": [
+				{
+					"name": "Get Active Messages (Carousel)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.length > 0) {",
+									"        pm.collectionVariables.set('recipientId', jsonData.data[0].id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/broadcast/tenant/messages",
+							"host": ["{{baseUrl}}"],
+							"path": ["broadcast", "tenant", "messages"]
+						},
+						"description": "Get active (non-expired, non-dismissed) broadcast messages for the tenant carousel"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Messages (History)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/broadcast/tenant/messages/all",
+							"host": ["{{baseUrl}}"],
+							"path": ["broadcast", "tenant", "messages", "all"]
+						},
+						"description": "Get all broadcast messages including expired and dismissed for history view"
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Message as Read",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/broadcast/tenant/messages/{{recipientId}}/read",
+							"host": ["{{baseUrl}}"],
+							"path": ["broadcast", "tenant", "messages", "{{recipientId}}", "read"]
+						},
+						"description": "Mark a broadcast message as read"
+					},
+					"response": []
+				},
+				{
+					"name": "Dismiss Message",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/broadcast/tenant/messages/{{recipientId}}/dismiss",
+							"host": ["{{baseUrl}}"],
+							"path": ["broadcast", "tenant", "messages", "{{recipientId}}", "dismiss"]
+						},
+						"description": "Dismiss a broadcast message from the carousel"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Unread Count",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/broadcast/tenant/messages/unread-count",
+							"host": ["{{baseUrl}}"],
+							"path": ["broadcast", "tenant", "messages", "unread-count"]
+						},
+						"description": "Get count of unread active messages for badge display"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Auth Helper",
+			"description": "Helper endpoints for authentication",
+			"item": [
+				{
+					"name": "Login (Manager)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.accessToken) {",
+									"        pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"manager@example.com\",\n    \"password\": \"your_password\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "login"]
+						},
+						"description": "Login as a property manager to get access token"
+					},
+					"response": []
+				},
+				{
+					"name": "Login (Tenant)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.accessToken) {",
+									"        pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"tenant@example.com\",\n    \"password\": \"your_password\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "login"]
+						},
+						"description": "Login as a tenant to get access token"
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

@@ -1,8 +1,10 @@
 package com.bms.backend.dto.response;
 
+import com.bms.backend.enums.LeaseSigningStatus;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -63,6 +65,19 @@ public class LeaseDetailsDto {
     // Navigation Actions (boolean flags for UI)
     private boolean hasMaintenanceRequests;
     private boolean hasDocuments;
+
+    // DocuSign Lease Signing Fields
+    private String leaseDocumentUrl;
+    private String docusignEnvelopeId;
+    private LeaseSigningStatus leaseSigningStatus;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
+    private Instant docusignSentAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
+    private Instant docusignSignedAt;
+
+    private String signedDocumentUrl;
     
     // Nested DTO for property images
     public static class PropertyImageDto {
@@ -377,5 +392,54 @@ public class LeaseDetailsDto {
     
     public void setHasDocuments(boolean hasDocuments) {
         this.hasDocuments = hasDocuments;
+    }
+
+    // DocuSign Lease Signing Getters and Setters
+    public String getLeaseDocumentUrl() {
+        return leaseDocumentUrl;
+    }
+
+    public void setLeaseDocumentUrl(String leaseDocumentUrl) {
+        this.leaseDocumentUrl = leaseDocumentUrl;
+    }
+
+    public String getDocusignEnvelopeId() {
+        return docusignEnvelopeId;
+    }
+
+    public void setDocusignEnvelopeId(String docusignEnvelopeId) {
+        this.docusignEnvelopeId = docusignEnvelopeId;
+    }
+
+    public LeaseSigningStatus getLeaseSigningStatus() {
+        return leaseSigningStatus;
+    }
+
+    public void setLeaseSigningStatus(LeaseSigningStatus leaseSigningStatus) {
+        this.leaseSigningStatus = leaseSigningStatus;
+    }
+
+    public Instant getDocusignSentAt() {
+        return docusignSentAt;
+    }
+
+    public void setDocusignSentAt(Instant docusignSentAt) {
+        this.docusignSentAt = docusignSentAt;
+    }
+
+    public Instant getDocusignSignedAt() {
+        return docusignSignedAt;
+    }
+
+    public void setDocusignSignedAt(Instant docusignSignedAt) {
+        this.docusignSignedAt = docusignSignedAt;
+    }
+
+    public String getSignedDocumentUrl() {
+        return signedDocumentUrl;
+    }
+
+    public void setSignedDocumentUrl(String signedDocumentUrl) {
+        this.signedDocumentUrl = signedDocumentUrl;
     }
 }

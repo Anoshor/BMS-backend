@@ -59,6 +59,9 @@ public class SecurityConfig {
                         // Payment recording endpoint (called from payment-service)
                         .requestMatchers("/api/v1/payments/record").permitAll()
 
+                        // DocuSign webhook endpoint (public)
+                        .requestMatchers("/api/v1/webhooks/docusign").permitAll()
+
                         // H2 Console (for development)
                         .requestMatchers("/h2-console/**").permitAll()
 
@@ -90,6 +93,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/broadcast/messages/**").hasAnyRole("PROPERTY_MANAGER", "BUILDING_OWNER")
                         // Broadcast endpoints - Tenant can view/interact with their messages
                         .requestMatchers("/api/v1/broadcast/tenant/**").hasRole("TENANT")
+
+                        // DocuSign endpoints - Manager can upload/send/manage leases
+                        .requestMatchers("/api/v1/docusign/leases/**").hasAnyRole("PROPERTY_MANAGER", "BUILDING_OWNER")
+                        // DocuSign endpoints - Tenant can sign and view their leases
+                        .requestMatchers("/api/v1/docusign/tenant/**").hasRole("TENANT")
 
                         // Property endpoints (accessible by authenticated managers)
                         .requestMatchers("/api/v1/properties/**").authenticated()

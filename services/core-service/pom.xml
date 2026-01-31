@@ -157,6 +157,13 @@
         </dependency>
 
         <!-- Using Brevo REST API directly (SDK has OkHttp conflicts with Spring Boot) -->
+
+        <!-- DocuSign eSignature SDK -->
+        <dependency>
+            <groupId>com.docusign</groupId>
+            <artifactId>docusign-esign-java</artifactId>
+            <version>4.4.0</version>
+        </dependency>
     </dependencies>
 
     <build>

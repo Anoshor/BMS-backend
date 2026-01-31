@@ -353,7 +353,15 @@ public class TenantService {
         // Navigation Actions
         dto.setHasMaintenanceRequests(hasMaintenanceRequests(apartment.getId(), tenant.getId()));
         dto.setHasDocuments(hasDocuments(apartment));
-        
+
+        // DocuSign Lease Signing Information
+        dto.setLeaseDocumentUrl(connection.getLeaseDocumentUrl());
+        dto.setDocusignEnvelopeId(connection.getDocusignEnvelopeId());
+        dto.setLeaseSigningStatus(connection.getLeaseSigningStatus());
+        dto.setDocusignSentAt(connection.getDocusignSentAt());
+        dto.setDocusignSignedAt(connection.getDocusignSignedAt());
+        dto.setSignedDocumentUrl(connection.getSignedDocumentUrl());
+
         return dto;
     }
     

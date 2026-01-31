@@ -38,4 +38,9 @@ public interface TenantPropertyConnectionRepository extends JpaRepository<Tenant
     @Query("SELECT tpc FROM TenantPropertyConnection tpc WHERE tpc.apartment.property = :property AND tpc.isActive = :isActive ORDER BY tpc.createdAt DESC")
     List<TenantPropertyConnection> findByPropertyAndIsActiveOrderByCreatedAtDesc(@Param("property") com.bms.backend.entity.PropertyBuilding property,
                                                                                  @Param("isActive") Boolean isActive);
+
+    java.util.Optional<TenantPropertyConnection> findByDocusignEnvelopeId(String envelopeId);
+
+    java.util.Optional<TenantPropertyConnection> findByTenantAndIsActiveAndLeaseSigningStatusIn(
+            User tenant, Boolean isActive, List<com.bms.backend.enums.LeaseSigningStatus> statuses);
 }
