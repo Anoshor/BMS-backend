@@ -397,14 +397,31 @@ public class DocuSignService {
     }
 
     private byte[] downloadDocumentFromS3(String documentUrl) throws Exception {
-        try (InputStream inputStream = s3Service.downloadFile(documentUrl);
-             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            byte[] buffer = new byte[8192];
-            int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                baos.write(buffer, 0, bytesRead);
+        // Download via HTTP from CloudFront URL instead of S3 API
+        // This avoids S3 permission issues when CloudFront is enabled
+        try {
+            java.net.URL url = new java.net.URL(documentUrl);
+            java.net.HttpURLConnection connection = (java.net.HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(30000);
+            connection.setReadTimeout(60000);
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode != 200) {
+                throw new RuntimeException("Failed to download document. HTTP status: " + responseCode);
             }
-            return baos.toByteArray();
+
+            try (InputStream inputStream = connection.getInputStream();
+                 ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    baos.write(buffer, 0, bytesRead);
+                }
+                return baos.toByteArray();
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to download file from URL: " + e.getMessage(), e);
         }
     }
 
