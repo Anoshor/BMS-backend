@@ -204,37 +204,65 @@ public class DocuSignService {
         TenantPropertyConnection connection = connectionRepository.findById(connectionId)
                 .orElseThrow(() -> new IllegalArgumentException("Lease connection not found"));
 
-        if (!connection.getManager().getId().equals(manager.getId())) {
+        // Check manager permission - handle null manager gracefully
+        if (connection.getManager() == null || !connection.getManager().getId().equals(manager.getId())) {
             throw new SecurityException("You don't have permission to void this envelope");
         }
 
-        if (connection.getDocusignEnvelopeId() == null) {
+        if (connection.getDocusignEnvelopeId() == null || connection.getDocusignEnvelopeId().isEmpty()) {
             throw new IllegalStateException("No envelope exists for this lease");
         }
 
-        LeaseSigningStatus status = connection.getLeaseSigningStatus();
-        if (status == LeaseSigningStatus.SIGNED) {
-            throw new IllegalStateException("Cannot void a signed lease");
+        try {
+            ApiClient apiClient = docuSignConfig.getApiClient();
+            EnvelopesApi envelopesApi = new EnvelopesApi(apiClient);
+
+            // First, sync the current status from DocuSign
+            Envelope currentEnvelope = envelopesApi.getEnvelope(docuSignConfig.getAccountId(), connection.getDocusignEnvelopeId());
+            String currentStatus = currentEnvelope.getStatus();
+
+            logger.info("Current DocuSign envelope status: {} for envelopeId: {}", currentStatus, connection.getDocusignEnvelopeId());
+
+            // Update local status if different
+            LeaseSigningStatus localStatus = LeaseSigningStatus.fromDocuSignStatus(currentStatus);
+            if (localStatus != connection.getLeaseSigningStatus()) {
+                connection.setLeaseSigningStatus(localStatus);
+                if (localStatus == LeaseSigningStatus.SIGNED && currentEnvelope.getCompletedDateTime() != null) {
+                    connection.setDocusignSignedAt(Instant.parse(currentEnvelope.getCompletedDateTime()));
+                }
+                connectionRepository.save(connection);
+            }
+
+            // Check if void is allowed based on actual DocuSign status
+            if ("completed".equalsIgnoreCase(currentStatus)) {
+                throw new IllegalStateException("Cannot void - the lease has already been signed");
+            }
+            if ("voided".equalsIgnoreCase(currentStatus)) {
+                throw new IllegalStateException("Envelope is already voided");
+            }
+            if (!"sent".equalsIgnoreCase(currentStatus) && !"delivered".equalsIgnoreCase(currentStatus)) {
+                throw new IllegalStateException("Cannot void envelope in '" + currentStatus + "' state. Only 'sent' or 'delivered' envelopes can be voided.");
+            }
+
+            // Proceed with voiding
+            Envelope envelope = new Envelope();
+            envelope.setStatus("voided");
+            envelope.setVoidedReason(voidReason);
+
+            envelopesApi.update(docuSignConfig.getAccountId(), connection.getDocusignEnvelopeId(), envelope);
+
+            connection.setLeaseSigningStatus(LeaseSigningStatus.VOIDED);
+            connectionRepository.save(connection);
+
+            logger.info("Envelope voided. EnvelopeId: {}, ConnectionId: {}, Reason: {}",
+                    connection.getDocusignEnvelopeId(), connectionId, voidReason);
+        } catch (IllegalStateException e) {
+            throw e; // Re-throw our validation exceptions
+        } catch (Exception e) {
+            logger.error("Failed to void envelope. EnvelopeId: {}, Error: {}",
+                    connection.getDocusignEnvelopeId(), e.getMessage(), e);
+            throw new RuntimeException("Failed to void envelope: " + e.getMessage(), e);
         }
-
-        if (status == LeaseSigningStatus.VOIDED) {
-            throw new IllegalStateException("Envelope is already voided");
-        }
-
-        ApiClient apiClient = docuSignConfig.getApiClient();
-        EnvelopesApi envelopesApi = new EnvelopesApi(apiClient);
-
-        Envelope envelope = new Envelope();
-        envelope.setStatus("voided");
-        envelope.setVoidedReason(voidReason);
-
-        envelopesApi.update(docuSignConfig.getAccountId(), connection.getDocusignEnvelopeId(), envelope);
-
-        connection.setLeaseSigningStatus(LeaseSigningStatus.VOIDED);
-        connectionRepository.save(connection);
-
-        logger.info("Envelope voided. EnvelopeId: {}, ConnectionId: {}, Reason: {}",
-                connection.getDocusignEnvelopeId(), connectionId, voidReason);
     }
 
     @Transactional
